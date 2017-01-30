@@ -1,0 +1,153 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: Load balancer and task role for the ECS service and an Elasticsearch instance
+
+Parameters:
+  Environment:
+    Type: String
+    AllowedValues: [ UAT, PRD ]
+  ECSInstancesSecurityGroup:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: The security group for the EC2 instances in the ECS cluster
+  VPC:
+    Type: AWS::EC2::VPC::Id
+  LoadBalancerSubnets:
+    Description: Choose all the public subnets in the VPC
+    Type: List<AWS::EC2::Subnet::Id>
+  LoadBalancerCertificateArn:
+    Description: ARN of the ACM cert to use for the load balancer
+    Type: String
+
+Resources:
+
+  ECSTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - 
+            Effect: Allow
+            Principal:
+              Service:
+                - ecs-tasks.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - 
+          PolicyName: read-write-elasticsearch
+          PolicyDocument:
+            Statement:
+            - Effect: Allow
+              Action:
+                - es:ESHttpGet
+                - es:ESHttpHead
+                - es:ESHttpPost
+                - es:ESHttpPut
+              Resource:
+                - !GetAtt ElasticsearchDomain.DomainArn
+
+  LoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties: 
+      GroupDescription: 'Open port 443 to the world'
+
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '443'
+          ToPort: '443'
+          CidrIp: 0.0.0.0/0
+
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: '32768'
+          ToPort: '61000'
+          DestinationSecurityGroupId:
+            Ref: ECSInstancesSecurityGroup
+      Tags:
+        - Key: Environment
+          Value:
+            Ref: Environment
+      VpcId:
+        Ref: VPC
+
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      LoadBalancerAttributes:
+        - Key: access_logs.s3.enabled
+          Value: true
+        - Key: access_logs.s3.bucket
+          Value: ovo-comms-logs
+        - Key: access_logs.s3.prefix
+          Value: !Sub "shipit/${Environment}/loadbalancer"
+      Name: !Sub "shipit-${Environment}"
+      Scheme: internet-facing
+      SecurityGroups:
+        - Ref: LoadBalancerSecurityGroup
+      Subnets:
+        Ref: LoadBalancerSubnets
+      Tags:
+        - Key: Environment
+          Value:
+            Ref: Environment
+
+  ECSTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckPath: '/healthcheck'
+      HealthCheckProtocol: HTTP
+      Name: !Sub "shipit-${Environment}"
+      Port: 80
+      Protocol: HTTP
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 30
+      Tags:
+        - Key: Environment
+          Value:
+            Ref: Environment
+      VpcId:
+        Ref: VPC
+
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+      - Type: forward
+        TargetGroupArn: !Ref 'ECSTargetGroup'
+      LoadBalancerArn: !Ref 'LoadBalancer'
+      Port: '443'
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Ref 'LoadBalancerCertificateArn'
+
+  ECSALBListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+      - Type: forward
+        TargetGroupArn: !Ref 'ECSTargetGroup'
+      Conditions:
+      - Field: path-pattern
+        Values: [/]
+      ListenerArn: !Ref 'ALBListener'
+      Priority: 1
+
+  ElasticsearchDomain:
+    Type: AWS::Elasticsearch::Domain
+    Properties: 
+      EBSOptions:
+        EBSEnabled: true
+        VolumeSize: 10
+      ElasticsearchClusterConfig:
+        InstanceCount: 1
+        InstanceType: t2.micro.elasticsearch
+      ElasticsearchVersion: "2.3"
+      Tags:
+        - Key: Environment
+          Value:
+            Ref: Environment
+        - Key: Service
+          Value: shipit
+

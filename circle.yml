@@ -1,0 +1,20 @@
+dependencies:
+  # Cache the resolution-cache and build streams to speed things up
+  cache_directories:
+    - "~/.sbt"
+    - "target/resolution-cache"
+    - "project/target/resolution-cache"
+  override:
+  # Override CircleCI Inference which tries to run `$play update`
+    - sbt test:compile
+    - if [ -e requirements.txt ]; then pip install -r requirements.txt;else pip install -r requirements.pip;fi
+
+deployment:
+  uat_and_prd:
+    branch: master
+    owner: ovotech
+    commands:
+      - git clone git@github.com:ovotech/comms-ci-scripts
+      - comms-ci-scripts/publish_docker_image.sh
+      - comms-ci-scripts/deploy_to_ecs.sh -s shipit PRD aws/container-definition.json
+      - comms-ci-scripts/comment_on_last_merged_pr.sh
