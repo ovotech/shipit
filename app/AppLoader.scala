@@ -11,6 +11,7 @@ class AppLoader extends ApplicationLoader {
     val components = new AppComponents(context)
 
     ES.initIndex.run(components.jestClient)
+    //ES.ApiKeys.list(0).run(components.jestClient).foreach(println)
 
     // TODO components.startKafkaConsumer()
 

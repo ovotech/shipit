@@ -1,7 +1,5 @@
 package controllers
 
-import java.time.{Instant, OffsetDateTime, ZoneOffset}
-
 import com.gu.googleauth.GoogleAuthConfig
 import play.api.libs.ws.WSClient
 import play.api.mvc._

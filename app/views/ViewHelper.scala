@@ -3,6 +3,8 @@ package views
 import java.time.{Instant, OffsetDateTime, ZoneId, ZoneOffset}
 import java.time.format.DateTimeFormatter
 
+import models.ApiKey
+
 object ViewHelper {
 
   def formatDate(offsetDateTime: OffsetDateTime): String =
@@ -14,5 +16,11 @@ object ViewHelper {
   def dateToLong(offsetDateTime: OffsetDateTime): Long = {
     offsetDateTime.toInstant.toEpochMilli
   }
+
+  def statusBadge(apiKey: ApiKey) =
+    if (apiKey.active)
+      <span class="label label-primary">Active</span>
+    else
+      <span class="label label-default">Disabled</span>
 
 }

@@ -5,6 +5,10 @@
 GET     /                           controllers.MainController.index
 GET     /healthcheck                controllers.MainController.healthcheck
 
+GET     /deployments                controllers.DeploymentsController.search
+
+GET     /api-keys                   controllers.ApiKeysController.list(offset: Int)
+
 GET     /login                      controllers.AuthController.login
 GET     /oauth2callback             controllers.AuthController.oauth2Callback
 GET     /auth-error                 controllers.AuthController.authError

@@ -3,7 +3,7 @@ import java.time.{LocalDateTime, ZoneOffset}
 import com.amazonaws.auth._
 import com.amazonaws.auth.profile.ProfileCredentialsProvider
 import com.google.common.base.Supplier
-import controllers.{AuthController, MainController}
+import controllers.{ApiKeysController, AuthController, DeploymentsController, MainController}
 import kafka.Graph
 import com.gu.googleauth.GoogleAuthConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
@@ -55,11 +55,15 @@ class AppComponents(context: Context)
   }
 
   val mainController = new MainController(googleAuthConfig, wsClient)
+  val apiKeysController = new ApiKeysController(googleAuthConfig, wsClient, jestClient)
+  val deploymentsController = new DeploymentsController(googleAuthConfig, wsClient, jestClient)
   val authController = new AuthController(googleAuthConfig, wsClient)
 
   lazy val router: Router = new Routes(
     httpErrorHandler,
     mainController,
+    deploymentsController,
+    apiKeysController,
     authController
   )
 
