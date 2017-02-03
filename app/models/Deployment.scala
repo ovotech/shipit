@@ -4,24 +4,21 @@ import java.time.OffsetDateTime
 
 case class Link(title: String, url: String)
 
-sealed trait DeploymentStatus
+sealed trait DeploymentResult
 
 object DeploymentStatus {
-  case object Running extends DeploymentStatus
-  case object Succeeded extends DeploymentStatus
-  case object Failed extends DeploymentStatus
-  case object Cancelled extends DeploymentStatus
+  case object Succeeded extends DeploymentResult
+  case object Failed extends DeploymentResult
+  case object Cancelled extends DeploymentResult
 }
 
 case class Deployment(
                    id: String,
-                   category: String,
+                   team: String,
                    service: String,
                    buildId: String,
+                   timestamp: OffsetDateTime,
                    links: Seq[Link],
-                   startedAt: Option[OffsetDateTime],
-                   finishedAt: Option[OffsetDateTime],
-                   status: DeploymentStatus
+                   result: DeploymentResult
                  )
-
 

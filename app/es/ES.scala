@@ -13,7 +13,7 @@ import io.searchbox.core.{Delete, Index, Search, Update}
 import io.searchbox.core.search.sort.Sort
 import io.searchbox.core.search.sort.Sort.Sorting
 import io.searchbox.indices.{CreateIndex, IndicesExists, Refresh}
-import models.ApiKey
+import models._
 import play.api.Logger
 
 import scala.collection.JavaConverters._
@@ -24,6 +24,47 @@ object ES {
   private object Types {
     val ApiKey = "apikey"
     val Deployment = "deployment"
+  }
+
+  object Deployments {
+
+    def create(team: String,
+               service: String,
+               buildId: String,
+               timestamp: OffsetDateTime,
+               links: Seq[Link],
+               result: DeploymentResult): Reader[JestClient, Deployment] =
+      executeAndRefresh(_create(team, service, buildId, timestamp, links, result))
+
+    def _create(team: String,
+                service: String,
+                buildId: String,
+                timestamp: OffsetDateTime,
+                links: Seq[Link],
+                result: DeploymentResult) = Reader[JestClient, Deployment] { jest =>
+      val linksList = links.map { link =>
+        Map(
+          "title" -> link.title,
+          "url" -> link.url
+        ).asJava
+      }.asJava
+      val map = Map(
+        "team" -> team,
+        "service" -> service,
+        "buildId" -> buildId,
+        "timestamp" -> timestamp.toString,
+        "links" -> linksList,
+        "result" -> result.toString
+      )
+      val action = new Index.Builder(map.asJava)
+        .index(IndexName)
+        .`type`(Types.Deployment)
+        .build()
+      val esResult = jest.execute(action)
+      val id = esResult.getId
+      Deployment(id, team, service, buildId, timestamp, links, result)
+    }
+
   }
 
   object ApiKeys {
