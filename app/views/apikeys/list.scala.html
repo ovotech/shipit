@@ -1,4 +1,4 @@
-@(items: Seq[ApiKey])(implicit user: com.gu.googleauth.UserIdentity)
+@(items: Seq[ApiKey])(implicit user: com.gu.googleauth.UserIdentity, flash: Flash)
 
 @import views.ViewHelper._
 
@@ -9,6 +9,13 @@
   </div>
 
   <p>You will need an API key if you want to send deployment events to :shipit:</p>
+
+  @for(info <- flash.get("info")) {
+    <div class="alert alert-info" role="alert">@info</div>
+  }
+  @for(error <- flash.get("errors")) {
+    <div class="alert alert-danger" role="alert">@error</div>
+  }
 
   <table class="table table-striped">
     <thead>
@@ -36,4 +43,18 @@
       }
     </tbody>
   </table>
+
+  <div class="panel panel-default">
+    <div class="panel-heading">Create an API key</div>
+    <div class="panel-body">
+      <form method="post" action="@routes.ApiKeysController.create" class="form-inline">
+        <div class="form-group">
+          <label for="description">Description <small>(optional)</small></label>
+          <input type="text" class="form-control" id="description" name="description">
+        </div>
+        <button type="submit" class="btn btn-primary">Submit</button>
+      </form>
+    </div>
+  </div>
+
 }

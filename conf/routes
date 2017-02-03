@@ -8,6 +8,7 @@ GET     /healthcheck                controllers.MainController.healthcheck
 GET     /deployments                controllers.DeploymentsController.search
 
 GET     /api-keys                   controllers.ApiKeysController.list(offset: Int)
+POST    /api-keys                   controllers.ApiKeysController.create
 POST    /api-keys/:id/disable       controllers.ApiKeysController.disable(id)
 POST    /api-keys/:id/enable        controllers.ApiKeysController.enable(id)
 POST    /api-keys/:id/delete        controllers.ApiKeysController.delete(id)

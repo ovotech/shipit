@@ -30,6 +30,11 @@ object ES {
 
     def create(key: String,
                description: Option[String],
+               createdBy: String): Reader[JestClient, ApiKey] =
+      executeAndRefresh(_create(key, description, createdBy))
+
+    def _create(key: String,
+               description: Option[String],
                createdBy: String) = Reader[JestClient, ApiKey] { jest =>
       val createdAt = OffsetDateTime.now()
       val map = Map(
