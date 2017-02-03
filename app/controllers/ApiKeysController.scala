@@ -21,4 +21,22 @@ class ApiKeysController(val authConfig: GoogleAuthConfig, val wsClient: WSClient
     Ok(views.html.apikeys.list(items))
   }
 
+  def disable(keyId: String) = AuthAction { request =>
+    implicit val user = request.user
+    ES.ApiKeys.disable(keyId).run(jestClient)
+    Redirect(routes.ApiKeysController.list(0)).flashing("info" -> "Disabled API key")
+  }
+
+  def enable(keyId: String) = AuthAction { request =>
+    implicit val user = request.user
+    ES.ApiKeys.enable(keyId).run(jestClient)
+    Redirect(routes.ApiKeysController.list(0)).flashing("info" -> "Enabled API key")
+  }
+
+  def delete(keyId: String) = AuthAction { request =>
+    implicit val user = request.user
+    ES.ApiKeys.delete(keyId).run(jestClient)
+    Redirect(routes.ApiKeysController.list(0)).flashing("info" -> "Deleted API key")
+  }
+
 }

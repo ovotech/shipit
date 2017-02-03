@@ -12,7 +12,7 @@
 
   <table class="table table-striped">
     <thead>
-      <tr><th>Key</th><th>Created</th><th>Status</th><th>Description</th></tr>
+      <tr><th>Key</th><th>Created</th><th>Status</th><th>Description</th><th>Actions</th></tr>
     </thead>
     <tbody>
       @for(item <- items) {
@@ -21,6 +21,17 @@
           <td>@formatDate(item.createdAt) by @item.createdBy</td>
           <td>@statusBadge(item)</td>
           <td>@item.description</td>
+          <td>
+            <form id="disable_@item.id" method="post" action="@routes.ApiKeysController.disable(item.id)"></form>
+            <form id="enable_@item.id" method="post" action="@routes.ApiKeysController.enable(item.id)"></form>
+            <form id="delete_@item.id" method="post" action="@routes.ApiKeysController.delete(item.id)"></form>
+            @if(item.active) {
+              <button form="disable_@item.id" class="btn btn-warning btn-sm">Disable</button>
+            } else {
+              <button form="enable_@item.id" class="btn btn-primary btn-sm">Enable</button>
+            }
+            <button form="delete_@item.id" class="btn btn-danger btn-sm">Delete</button>
+          </td>
         </tr>
       }
     </tbody>

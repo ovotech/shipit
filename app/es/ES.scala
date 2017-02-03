@@ -9,10 +9,10 @@ import cats.syntax.either._
 import cats.data.Reader
 import com.google.gson.JsonElement
 import io.searchbox.client.JestClient
-import io.searchbox.core.{Index, Search}
+import io.searchbox.core.{Delete, Index, Search, Update}
 import io.searchbox.core.search.sort.Sort
 import io.searchbox.core.search.sort.Sort.Sorting
-import io.searchbox.indices.{CreateIndex, IndicesExists}
+import io.searchbox.indices.{CreateIndex, IndicesExists, Refresh}
 import models.ApiKey
 import play.api.Logger
 
@@ -64,6 +64,37 @@ object ES {
         .flatMap(hit => parseHit(hit.source, hit.id))
     }
 
+    def disable(keyId: String) = executeAndRefresh(updateActiveFlag(keyId, active = false))
+
+    def enable(keyId: String) = executeAndRefresh(updateActiveFlag(keyId, active = true))
+
+    def delete(keyId: String) = executeAndRefresh(_delete(keyId))
+
+    private def _delete(keyId: String) = Reader[JestClient, Unit] { jest =>
+      val action = new Delete.Builder(keyId)
+        .index(IndexName)
+        .`type`(Types.ApiKey)
+        .build()
+      jest.execute(action)
+    }
+
+    private def updateActiveFlag(keyId: String, active: Boolean) = Reader[JestClient, Unit] { jest =>
+      val update =
+        s"""
+           |{
+           |   "doc" : {
+           |      "active": $active
+           |   }
+           |}
+         """.stripMargin
+      val action = new Update.Builder(update)
+        .index(IndexName)
+        .`type`(Types.ApiKey)
+        .id(keyId)
+        .build()
+      jest.execute(action)
+    }
+
     private def parseHit(jsonElement: JsonElement, id: String): Option[ApiKey] = {
       val either = for {
         json <- parse(jsonElement.toString).right
@@ -75,6 +106,15 @@ object ES {
     }
 
   }
+
+  private def refresh = Reader[JestClient, Unit] { jest =>
+    jest.execute(new Refresh.Builder().addIndex(IndexName).build())
+  }
+
+  private def executeAndRefresh[A](action: Reader[JestClient, A]): Reader[JestClient, A] = for {
+    result <- action
+    _ <- refresh
+  } yield result
 
   def initIndex: Reader[JestClient, Unit] = {
     for {
