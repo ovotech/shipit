@@ -93,6 +93,22 @@ object ES {
       ApiKey(id, key, description, createdAt, createdBy, active = true)
     }
 
+    def findByKey(key: String) = Reader[JestClient, Option[ApiKey]] { jest =>
+      val query =
+        s"""{
+           |  "size": 1,
+           |  "query": { "term": { "key": "$key" } }
+           |}""".stripMargin
+      val action = new Search.Builder(query)
+        .addIndex(IndexName)
+        .addType(Types.ApiKey)
+        .build()
+      val result = jest.execute(action)
+      result.getHits(classOf[JsonElement]).asScala
+        .flatMap(hit => parseHit(hit.source, hit.id))
+        .headOption
+    }
+
     def list(offset: Int) = Reader[JestClient, Seq[ApiKey]] { jest =>
       val query =
         s"""{
@@ -175,7 +191,41 @@ object ES {
 
   private def createIndex(alreadyExists: Boolean) = Reader[JestClient, Unit] { jest =>
     if (!alreadyExists) {
-      jest.execute(new CreateIndex.Builder(IndexName).build()) // TODO mapping
+      jest.execute(new CreateIndex.Builder(IndexName).settings(
+        s"""
+           |{
+           |  "settings" : {
+           |    "number_of_shards" : 1,
+           |    "number_of_replicas" : 0
+           |  },
+           |  "mappings" : {
+           |    "${Types.ApiKey}" : {
+           |      "properties" : {
+           |        "key" : { "type" : "string", "index" : "not_analyzed" },
+           |        "description" : { "type" : "string" },
+           |        "createdAt" : { "type" : "date" },
+           |        "createdBy" : { "type" : "string" },
+           |        "active" : { "type" : "boolean" }
+           |      }
+           |    },
+           |    "${Types.Deployment}": {
+           |      "properties" : {
+           |        "team" : { "type" : "string" },
+           |        "service" : { "type" : "string" },
+           |        "buildId" : { "type" : "string", "index" : "not_analyzed" },
+           |        "timestamp" : { "type" : "date" },
+           |        "links": {
+           |          "properties": {
+           |            "title": { "type" : "string" },
+           |            "url": { "type" : "string" }
+           |          }
+           |        },
+           |        "result" : { "type" : "string" }
+           |      }
+           |    }
+           |  }
+           |}
+         """.stripMargin).build())
       Logger.info("Created ES index")
     }
   }

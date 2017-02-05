@@ -6,6 +6,7 @@ GET     /                           controllers.MainController.index
 GET     /healthcheck                controllers.MainController.healthcheck
 
 GET     /deployments                controllers.DeploymentsController.search
+POST    /deployments                controllers.DeploymentsController.create
 
 GET     /api-keys                   controllers.ApiKeysController.list(offset: Int)
 POST    /api-keys                   controllers.ApiKeysController.create
