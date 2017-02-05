@@ -36,7 +36,7 @@ object ES {
                result: DeploymentResult): Reader[JestClient, Deployment] =
       executeAndRefresh(_create(team, service, buildId, timestamp, links, result))
 
-    def _create(team: String,
+    private def _create(team: String,
                 service: String,
                 buildId: String,
                 timestamp: OffsetDateTime,
@@ -74,7 +74,7 @@ object ES {
                createdBy: String): Reader[JestClient, ApiKey] =
       executeAndRefresh(_create(key, description, createdBy))
 
-    def _create(key: String,
+    private def _create(key: String,
                description: Option[String],
                createdBy: String) = Reader[JestClient, ApiKey] { jest =>
       val createdAt = OffsetDateTime.now()

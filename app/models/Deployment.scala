@@ -6,10 +6,20 @@ case class Link(title: String, url: String)
 
 sealed trait DeploymentResult
 
-object DeploymentStatus {
+object DeploymentResult {
   case object Succeeded extends DeploymentResult
   case object Failed extends DeploymentResult
   case object Cancelled extends DeploymentResult
+
+  def fromString(string: String) = string match {
+    case "succeeded" => Some(Succeeded)
+    case "failed" => Some(Failed)
+    case "cancelled" => Some(Cancelled)
+    case _ => None
+  }
+
+  def toString(result: DeploymentResult) = result.toString.toLowerCase
+
 }
 
 case class Deployment(
