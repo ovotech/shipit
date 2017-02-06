@@ -26,10 +26,10 @@ class DeploymentsController(val authConfig: GoogleAuthConfig, val wsClient: WSCl
     Ok(views.html.index())
   }
 
-  def search() = AuthAction { request =>
+  def search(team: Option[String], service: Option[String], buildId: Option[String]) = AuthAction { request =>
     implicit val user = request.user
     val items = ES.Deployments.search(offset = 0).run(jestClient)
-    Ok(views.html.deployments.search(items))
+    Ok(views.html.deployments.search(items, team, service, buildId, Some(DeploymentResult.Failed)))
   }
 
   def create = ApiKeyAuthAction { implicit request =>
