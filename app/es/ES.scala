@@ -36,6 +36,26 @@ object ES {
                result: DeploymentResult): Reader[JestClient, Deployment] =
       executeAndRefresh(_create(team, service, buildId, timestamp, links, result))
 
+    def search(
+              // TODO filters
+              offset: Int
+              ) = Reader[JestClient, Seq[Deployment]] { jest =>
+      val query =
+        s"""{
+           |  "from": $offset,
+           |  "size": 20,
+           |  "query": { "match_all": {} }
+           |}""".stripMargin
+      val action = new Search.Builder(query)
+        .addIndex(IndexName)
+        .addType(Types.Deployment)
+        .addSort(new Sort("timestamp", Sorting.DESC))
+        .build()
+      val result = jest.execute(action)
+      result.getHits(classOf[JsonElement]).asScala
+        .flatMap(hit => parseHit(hit.source, hit.id))
+    }
+
     private def _create(team: String,
                 service: String,
                 buildId: String,
@@ -63,6 +83,16 @@ object ES {
       val esResult = jest.execute(action)
       val id = esResult.getId
       Deployment(id, team, service, buildId, timestamp, links, result)
+    }
+
+    private def parseHit(jsonElement: JsonElement, id: String): Option[Deployment] = {
+      val either = for {
+        json <- parse(jsonElement.toString).right
+        incomplete <- json.as[String => Deployment].right
+      } yield incomplete.apply(id)
+      either
+        .leftMap(e => Logger.warn("Failed to decode deployment returned by ES", e))
+        .toOption
     }
 
   }
