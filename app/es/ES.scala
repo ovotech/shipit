@@ -43,13 +43,30 @@ object ES {
               resultQuery: Option[DeploymentResult],
               offset: Int
               ) = Reader[JestClient, Seq[Deployment]] { jest =>
-      // TODO build query
+      val filters = Seq(
+        teamQuery.map(x => s"""{ "match": { "team": "$x" } }"""),
+        serviceQuery.map(x => s"""{ "match": { "service": "$x" } }"""),
+        buildIdQuery.map(x => s"""{ "match": { "buildId": "$x" } }"""),
+        resultQuery.map(x => s"""{ "match": { "result": "$x" } }""")
+      ).flatten
       val query =
         s"""{
            |  "from": $offset,
            |  "size": 20,
-           |  "query": { "match_all": {} }
+           |  "query": {
+           |    "bool": {
+           |      "must": { "match_all": {} },
+           |      "filter": {
+           |        "bool": {
+           |          "must": [
+           |            ${filters.mkString(", ")}
+           |          ]
+           |        }
+           |      }
+           |    }
+           |  }
            |}""".stripMargin
+      println(query)
       val action = new Search.Builder(query)
         .addIndex(IndexName)
         .addType(Types.Deployment)
@@ -255,7 +272,7 @@ object ES {
            |            "url": { "type" : "string" }
            |          }
            |        },
-           |        "result" : { "type" : "string" }
+           |        "result" : { "type" : "string", "index": "not_analyzed" }
            |      }
            |    }
            |  }

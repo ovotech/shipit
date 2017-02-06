@@ -10,8 +10,8 @@
   </div>
 
   <div class="panel panel-default">
-    <div class="panel-heading">Filters</div>
-    <div class="panel-body">
+    <div class="panel-heading">Filters <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#filters" aria-expanded="false" aria-controls="filters">Toggle</button></div>
+    <div class="panel-body collapse" id="filters">
       <form method="get" action="@routes.DeploymentsController.search(None, None, None, None, 0)" class="form form-horizontal">
         <div class="form-group">
           <label class="col-sm-2 control-label" for="team">Team</label>
