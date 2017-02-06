@@ -26,10 +26,12 @@ class DeploymentsController(val authConfig: GoogleAuthConfig, val wsClient: WSCl
     Ok(views.html.index())
   }
 
-  def search(team: Option[String], service: Option[String], buildId: Option[String]) = AuthAction { request =>
+  def search(team: Option[String], service: Option[String], buildId: Option[String], result: Option[String], offset: Int) = AuthAction { request =>
     implicit val user = request.user
-    val items = ES.Deployments.search(offset = 0).run(jestClient)
-    Ok(views.html.deployments.search(items, team, service, buildId, Some(DeploymentResult.Failed)))
+    val (teamQuery, serviceQuery, buildIdQuery, resultQuery) =
+      (team.filter(_.nonEmpty), service.filter(_.nonEmpty), buildId.filter(_.nonEmpty), result.flatMap(DeploymentResult.fromLowerCaseString))
+    val items = ES.Deployments.search(teamQuery, serviceQuery, buildIdQuery, resultQuery, offset).run(jestClient)
+    Ok(views.html.deployments.search(items, teamQuery, serviceQuery, buildIdQuery, resultQuery))
   }
 
   def create = ApiKeyAuthAction { implicit request =>
@@ -59,8 +61,8 @@ object DeploymentsController {
   )
 
   private val deploymentResult = nonEmptyText
-    .verifying(DeploymentResult.fromString(_).isDefined)
-    .transform(DeploymentResult.fromString(_).get, DeploymentResult.toString)
+    .verifying(DeploymentResult.fromLowerCaseString(_).isDefined)
+    .transform(DeploymentResult.fromLowerCaseString(_).get, DeploymentResult.toLowerCaseString)
 
   val DeploymentForm = Form(mapping(
     "team" -> nonEmptyText,

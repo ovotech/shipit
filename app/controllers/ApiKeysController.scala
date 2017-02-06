@@ -13,7 +13,7 @@ import play.api.data.Forms._
 class ApiKeysController(val authConfig: GoogleAuthConfig, val wsClient: WSClient, jestClient: JestClient) extends AuthActions with Controller {
   import ApiKeysController._
 
-  def list(offset: Int = 0) = AuthAction { implicit request =>
+  def list(offset: Int) = AuthAction { implicit request =>
     implicit val user = request.user
     val items = ES.ApiKeys.list(offset).run(jestClient)
     Ok(views.html.apikeys.list(items))

@@ -11,14 +11,14 @@ object DeploymentResult {
   case object Failed extends DeploymentResult
   case object Cancelled extends DeploymentResult
 
-  def fromString(string: String) = string match {
+  def fromLowerCaseString(string: String) = string match {
     case "succeeded" => Some(Succeeded)
     case "failed" => Some(Failed)
     case "cancelled" => Some(Cancelled)
     case _ => None
   }
 
-  def toString(result: DeploymentResult) = result.toString.toLowerCase
+  def toLowerCaseString(result: DeploymentResult) = result.toString.toLowerCase
 
 }
 

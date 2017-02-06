@@ -37,9 +37,13 @@ object ES {
       executeAndRefresh(_create(team, service, buildId, timestamp, links, result))
 
     def search(
-              // TODO filters
+              teamQuery: Option[String],
+              serviceQuery: Option[String],
+              buildIdQuery: Option[String],
+              resultQuery: Option[DeploymentResult],
               offset: Int
               ) = Reader[JestClient, Seq[Deployment]] { jest =>
+      // TODO build query
       val query =
         s"""{
            |  "from": $offset,
@@ -54,6 +58,7 @@ object ES {
       val result = jest.execute(action)
       result.getHits(classOf[JsonElement]).asScala
         .flatMap(hit => parseHit(hit.source, hit.id))
+      // TOOD return pagination info
     }
 
     private def _create(team: String,

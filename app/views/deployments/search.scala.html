@@ -1,6 +1,7 @@
 @(items: Seq[Deployment], team: Option[String], service: Option[String], buildId: Option[String], result: Option[DeploymentResult])(implicit user: com.gu.googleauth.UserIdentity)
 
 @import views.ViewHelper._
+@import models.DeploymentResult._
 
 @main {
 
@@ -11,7 +12,7 @@
   <div class="panel panel-default">
     <div class="panel-heading">Filters</div>
     <div class="panel-body">
-      <form method="get" action="@routes.DeploymentsController.search(None, None, None)" class="form form-horizontal">
+      <form method="get" action="@routes.DeploymentsController.search(None, None, None, None, 0)" class="form form-horizontal">
         <div class="form-group">
           <label class="col-sm-2 control-label" for="team">Team</label>
           <div class="col-sm-4">
@@ -35,13 +36,13 @@
           <div class="col-sm-4">
             <select class="form-control" id="result" name="result">
               <option value="">(any)</option>
-              <option value="@DeploymentResult.Succeeded" @if(result.contains(DeploymentResult.Succeeded)) { selected="" }>Succeeded</option>
-              <option value="@DeploymentResult.Failed" @if(result.contains(DeploymentResult.Failed)) { selected="" }>Failed</option>
-              <option value="@DeploymentResult.Cancelled" @if(result.contains(DeploymentResult.Cancelled)) { selected="" }>Cancelled</option>
+              <option value="@DeploymentResult.toLowerCaseString(Succeeded)" @if(result.contains(DeploymentResult.Succeeded)) { selected="" }>Succeeded</option>
+              <option value="@DeploymentResult.toLowerCaseString(Failed)"    @if(result.contains(DeploymentResult.Failed)) { selected="" }>Failed</option>
+              <option value="@DeploymentResult.toLowerCaseString(Cancelled)" @if(result.contains(DeploymentResult.Cancelled)) { selected="" }>Cancelled</option>
             </select>
           </div>
         </div>
-        <!-- TODO date pickers for date range -->
+        <!-- TODO date picker -->
         <div class="form-group">
           <div class="col-sm-offset-2 col-sm-4">
             <button type="submit" class="btn btn-primary">Search</button>
