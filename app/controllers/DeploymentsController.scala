@@ -5,6 +5,7 @@ import java.time.OffsetDateTime
 import com.gu.googleauth.GoogleAuthConfig
 import es.ES
 import io.searchbox.client.JestClient
+import logic.Deployments
 import models.DeploymentResult.Succeeded
 import models.{DeploymentResult, Link}
 import play.api.data.Form
@@ -12,12 +13,14 @@ import play.api.data.Forms._
 import play.api.libs.ws.WSClient
 import play.api.mvc._
 
-class DeploymentsController(val authConfig: GoogleAuthConfig, val wsClient: WSClient, val jestClient: JestClient)
+class DeploymentsController(val authConfig: GoogleAuthConfig, val wsClient: WSClient, ctx: Deployments.Context)
   extends AuthActions
   with ApiKeyAuth
   with Controller {
 
   import DeploymentsController._
+
+  val jestClient = ctx.jestClient
 
   val healthcheck = Action { Ok("OK") }
 
@@ -36,14 +39,14 @@ class DeploymentsController(val authConfig: GoogleAuthConfig, val wsClient: WSCl
 
   def create = ApiKeyAuthAction { implicit request =>
     DeploymentForm.bindFromRequest.fold(_ => BadRequest, data => {
-      ES.Deployments.create(
+      Deployments.createDeployment(
         data.team,
         data.service,
         data.buildId,
         OffsetDateTime.now(),
         data.links.getOrElse(Nil),
         data.result.getOrElse(Succeeded)
-      ).run(jestClient)
+      ).run(ctx)
       Ok("ok")
     })
   }

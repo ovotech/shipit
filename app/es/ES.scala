@@ -66,7 +66,6 @@ object ES {
            |    }
            |  }
            |}""".stripMargin
-      println(query)
       val action = new Search.Builder(query)
         .addIndex(IndexName)
         .addType(Types.Deployment)

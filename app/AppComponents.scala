@@ -8,13 +8,14 @@ import kafka.Graph
 import com.gu.googleauth.GoogleAuthConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.client.config.HttpClientConfig
+import logic.Deployments
 import org.apache.http.impl.client.HttpClientBuilder
-import org.joda.time.DateTimeZone
 import play.api.ApplicationLoader.Context
 import play.api.routing.Router
 import play.api.{BuiltInComponentsFromContext, Logger}
 import play.api.libs.ws.ahc.AhcWSComponents
 import router.Routes
+import slack.Slack
 import vc.inreach.aws.request.{AWSSigner, AWSSigningRequestInterceptor}
 
 class AppComponents(context: Context)
@@ -54,9 +55,12 @@ class AppComponents(context: Context)
     factory.getObject
   }
 
+  val slackWebhookUrl = mandatoryConfig("slack.webhookUrl")
+  val slackCtx = Slack.Context(wsClient, slackWebhookUrl)
+
   val mainController = new MainController(googleAuthConfig, wsClient)
   val apiKeysController = new ApiKeysController(googleAuthConfig, wsClient, jestClient)
-  val deploymentsController = new DeploymentsController(googleAuthConfig, wsClient, jestClient)
+  val deploymentsController = new DeploymentsController(googleAuthConfig, wsClient, Deployments.Context(jestClient, slackCtx))
   val authController = new AuthController(googleAuthConfig, wsClient)
 
   lazy val router: Router = new Routes(
