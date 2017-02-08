@@ -12,7 +12,7 @@ import io.searchbox.client.JestClient
 import io.searchbox.core.{Delete, Index, Search, Update}
 import io.searchbox.core.search.sort.Sort
 import io.searchbox.core.search.sort.Sort.Sorting
-import io.searchbox.indices.{CreateIndex, IndicesExists, Refresh}
+import io.searchbox.indices.{CreateIndex, DeleteIndex, IndicesExists, Refresh}
 import models._
 import play.api.Logger
 
@@ -169,12 +169,12 @@ object ES {
         .headOption
     }
 
-    def list(page: Int) = Reader[JestClient, Seq[ApiKey]] { jest =>
+    def list(createdBy: String, page: Int) = Reader[JestClient, Seq[ApiKey]] { jest =>
       val query =
         s"""{
            |  "from": ${pageToOffset(page)},
            |  "size": $PageSize,
-           |  "query": { "match_all": {} }
+           |  "query": { "term": { "createdBy": "$createdBy" } }
            |}""".stripMargin
       val action = new Search.Builder(query)
         .addIndex(IndexName)
@@ -264,7 +264,7 @@ object ES {
            |        "key" : { "type" : "string", "index" : "not_analyzed" },
            |        "description" : { "type" : "string" },
            |        "createdAt" : { "type" : "date" },
-           |        "createdBy" : { "type" : "string" },
+           |        "createdBy" : { "type" : "string", "index": "not_analyzed" },
            |        "active" : { "type" : "boolean" }
            |      }
            |    },
@@ -289,5 +289,9 @@ object ES {
       Logger.info("Created ES index")
     }
   }
+
+//  def deleteIndex = Reader[JestClient, Unit] { jest =>
+//    jest.execute(new DeleteIndex.Builder(IndexName).build())
+//  }
 
 }

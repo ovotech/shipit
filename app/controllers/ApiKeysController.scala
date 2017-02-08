@@ -15,7 +15,7 @@ class ApiKeysController(val authConfig: GoogleAuthConfig, val wsClient: WSClient
 
   def list(page: Int) = AuthAction { implicit request =>
     implicit val user = request.user
-    val items = ES.ApiKeys.list(page).run(jestClient)
+    val items = ES.ApiKeys.list(request.user.email, page).run(jestClient)
     Ok(views.html.apikeys.list(items))
   }
 

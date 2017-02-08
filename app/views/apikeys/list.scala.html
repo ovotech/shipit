@@ -49,6 +49,7 @@
     <div class="panel-heading">Create an API key</div>
     <div class="panel-body">
       <form method="post" action="@routes.ApiKeysController.create" class="form-inline">
+        @CSRF.formField
         <div class="form-group">
           <label for="description">Description <small>(optional)</small></label>
           <input type="text" class="form-control" id="description" name="description">
