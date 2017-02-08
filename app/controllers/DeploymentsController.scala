@@ -34,11 +34,17 @@ class DeploymentsController(val authConfig: GoogleAuthConfig, val wsClient: WSCl
     val (teamQuery, serviceQuery, buildIdQuery, resultQuery) =
       (team.filter(_.nonEmpty), service.filter(_.nonEmpty), buildId.filter(_.nonEmpty), result.flatMap(DeploymentResult.fromLowerCaseString))
     val searchResult = ES.Deployments.search(teamQuery, serviceQuery, buildIdQuery, resultQuery, page).run(jestClient)
-    Ok(views.html.deployments.search(searchResult.items, teamQuery, serviceQuery, buildIdQuery, resultQuery))
+    Ok(views.html.deployments.search(searchResult, teamQuery, serviceQuery, buildIdQuery, resultQuery))
   }
 
   def create = ApiKeyAuthAction { implicit request =>
-    DeploymentForm.bindFromRequest.fold(_ => BadRequest, data => {
+    DeploymentForm.bindFromRequest.fold(_ =>
+      BadRequest(
+        """You must include at least the following form fields in your POST: 'team', 'service', 'buildId'.
+          |You may also one or more links (e.g. links[0][title]=PR, links[0][url]=http://github.com/my-pr)
+          |and a 'result' field containing the result of the deployment ('succeeded', 'failed' or 'cancelled').""".stripMargin
+      ),
+      data => {
       Deployments.createDeployment(
         data.team,
         data.service,

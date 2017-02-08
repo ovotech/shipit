@@ -30,9 +30,9 @@ object ES {
   private def pageToOffset(page: Int) = (page - 1) * PageSize
 
   case class Page[A](items: Seq[A], pageNumber: Int, total: Int) {
-    def prevFewPages: Seq[Int] = Nil
-    def nextFewPages: Seq[Int] = Nil
-    def lastPage: Int = (total / PageSize) + 1
+
+    def lastPage: Int = ((total - 1) / PageSize) + 1
+
   }
 
   object Deployments {

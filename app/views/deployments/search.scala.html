@@ -1,4 +1,4 @@
-@(items: Seq[Deployment], team: Option[String], service: Option[String], buildId: Option[String], result: Option[DeploymentResult])(implicit user: com.gu.googleauth.UserIdentity)
+@(page: es.ES.Page[Deployment], team: Option[String], service: Option[String], buildId: Option[String], result: Option[DeploymentResult])(implicit user: com.gu.googleauth.UserIdentity)
 
 @import views.ViewHelper._
 @import models.DeploymentResult._
@@ -57,7 +57,7 @@
       <tr><th>Timestamp</th><th>Team</th><th>Service</th><th>Build ID</th><th>Result</th><th>Links</th></tr>
     </thead>
     <tbody>
-      @for(item <- items) {
+      @for(item <- page.items) {
         <tr>
           <td><time class="timeago" datetime="@item.timestamp.toString">@formatDate(item.timestamp)</time></td>
           <td>@item.team</td>
@@ -75,6 +75,15 @@
     </tbody>
   </table>
 
-  <!-- TODO pagination here -->
+  <ul class="pager">
+    @if(page.pageNumber > 1) {
+      <li><a href="@routes.DeploymentsController.search(team, service, buildId, result.map(DeploymentResult.toLowerCaseString))">Latest</a></li>
+      <li><a href="@routes.DeploymentsController.search(team, service, buildId, result.map(DeploymentResult.toLowerCaseString), page.pageNumber - 1)">&larr; Newer</a></li>
+    }
+    @if(page.pageNumber < page.lastPage) {
+      <li><a href="@routes.DeploymentsController.search(team, service, buildId, result.map(DeploymentResult.toLowerCaseString), page.pageNumber + 1)">Older &rarr;</a></li>
+      <li><a href="@routes.DeploymentsController.search(team, service, buildId, result.map(DeploymentResult.toLowerCaseString), page.lastPage)">Oldest</a></li>
+    }
+  </ul>
 
 }
