@@ -13,4 +13,9 @@ class MainController(val authConfig: GoogleAuthConfig, val wsClient: WSClient) e
     Ok(views.html.index())
   }
 
+  val guide = AuthAction { request =>
+    implicit val user = request.user
+    Ok(views.html.guide())
+  }
+
 }

@@ -3,6 +3,7 @@
 # ~~~~
 
 GET     /                           controllers.MainController.index
+GET     /guide                      controllers.MainController.guide
 GET     /healthcheck                controllers.MainController.healthcheck
 
 GET     /deployments                controllers.DeploymentsController.search(team: Option[String], service: Option[String], buildId: Option[String], result: Option[String], page: Int ?= 1)
