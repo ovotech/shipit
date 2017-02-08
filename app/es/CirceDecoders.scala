@@ -14,9 +14,9 @@ object CirceDecoders {
     Decoder.decodeString.emapTry(x => Try(OffsetDateTime.parse(x)))
 
   implicit val decodeDeploymentResult: Decoder[DeploymentResult] = Decoder.decodeString.emap {
-    case "Succeeded" => Right(Succeeded)
-    case "Failed" => Right(Failed)
-    case "Cancelled" => Right(Cancelled)
+    case "Succeeded" | "succeeded" => Right(Succeeded)
+    case "Failed" | "failed" => Right(Failed)
+    case "Cancelled" | "cancelled" => Right(Cancelled)
     case other => Left(s"Unrecognised deployment result: $other")
   }
 

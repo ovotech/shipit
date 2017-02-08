@@ -10,7 +10,8 @@ import cats.instances.future._
 import scala.concurrent.ExecutionContext.Implicits.global
 import es.ES
 import io.searchbox.client.JestClient
-import models.{Deployment, DeploymentResult, Link}
+import models.DeploymentResult.Succeeded
+import models.{Deployment, DeploymentKafkaEvent, DeploymentResult, Link}
 import play.api.Logger
 import slack.Slack
 
@@ -31,5 +32,18 @@ object Deployments {
                       .local[Context](_.jestClient)
                       .transform(FunctionK.lift[Id, Future](Future.successful))
       slackResp <- Slack.sendNotification(deployment).local[Context](_.slackCtx)
-    } yield deployment
+    } yield {
+      Logger.info(s"Created deployment: $deployment")
+      deployment
+    }
+
+  def createDeploymentFromKafkaEvent(event: DeploymentKafkaEvent): Kleisli[Future, Context, Deployment] =
+    createDeployment(
+      event.team,
+      event.service,
+      event.buildId,
+      OffsetDateTime.now(),
+      event.links.getOrElse(Nil),
+      event.result.getOrElse(Succeeded)
+    )
 }

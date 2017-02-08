@@ -8,10 +8,16 @@ import akka.kafka.scaladsl.Consumer
 import akka.kafka.scaladsl.Consumer.Control
 import play.api.Logger
 
+import scala.concurrent.Future
+
 object Graph {
 
-  def build[V](kafkaHosts: String, groupId: String, topic: String, deserializer: Deserializer[Option[V]])
-              (implicit actorSystem: ActorSystem): Source[V, Control] = {
+  def build[V, R](kafkaHosts: String,
+                  groupId: String,
+                  topic: String,
+                  deserializer: Deserializer[Option[V]])
+                 (processEvent: V => Future[R])
+                 (implicit actorSystem: ActorSystem): Source[R, Control] = {
 
     Logger.info(s"Building graph hosts=[$kafkaHosts] groupId=[$groupId] topic=[$topic]")
 
@@ -25,6 +31,7 @@ object Graph {
         .flatMapConcat { record =>
           Source[V](record.value().to[collection.immutable.Iterable])
         }
+      .mapAsync(1)(processEvent)
   }
 
 }

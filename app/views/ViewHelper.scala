@@ -27,6 +27,6 @@ object ViewHelper {
   def resultBadge(deployment: Deployment) = deployment.result match {
     case Succeeded => <span class="label label-primary">Succeeded</span>
     case Failed => <span class="label label-danger">Failed</span>
-    case Cancelled => <span class="label label-warning">Failed</span>
+    case Cancelled => <span class="label label-warning">Cancelled</span>
   }
 }
