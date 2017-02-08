@@ -46,6 +46,7 @@ Resources:
                 - es:ESHttpPut
               Resource:
                 - !GetAtt ElasticsearchDomain.DomainArn
+                - !Sub "${ElasticsearchDomain.DomainArn}/*"
 
   LoadBalancerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
