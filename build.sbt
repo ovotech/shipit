@@ -3,6 +3,7 @@ scalaVersion := "2.11.8"
 
 libraryDependencies ++= Seq(
   ws,
+  filters,
   "io.circe" %% "circe-parser" % "0.7.0",
   "io.circe" %% "circe-generic" % "0.7.0",
   "com.typesafe.akka" %% "akka-stream-kafka" % "0.13",

@@ -14,13 +14,16 @@ import play.api.ApplicationLoader.Context
 import play.api.routing.Router
 import play.api.{BuiltInComponentsFromContext, Logger}
 import play.api.libs.ws.ahc.AhcWSComponents
+import play.api.mvc.EssentialFilter
+import play.filters.csrf.CSRFComponents
 import router.Routes
 import slack.Slack
 import vc.inreach.aws.request.{AWSSigner, AWSSigningRequestInterceptor}
 
 class AppComponents(context: Context)
     extends BuiltInComponentsFromContext(context)
-    with AhcWSComponents {
+    with AhcWSComponents
+    with CSRFComponents {
 
   implicit val actorSys = actorSystem
 
@@ -70,6 +73,8 @@ class AppComponents(context: Context)
     apiKeysController,
     authController
   )
+
+  override lazy val httpFilters: Seq[EssentialFilter] = Seq(csrfFilter)
 
   def startKafkaConsumer(): Unit = {
     Logger.info("Starting Kafka consumer")
