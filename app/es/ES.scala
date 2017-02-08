@@ -26,6 +26,15 @@ object ES {
     val Deployment = "deployment"
   }
 
+  private val PageSize = 20
+  private def pageToOffset(page: Int) = (page - 1) * PageSize
+
+  case class Page[A](items: Seq[A], pageNumber: Int, total: Int) {
+    def prevFewPages: Seq[Int] = Nil
+    def nextFewPages: Seq[Int] = Nil
+    def lastPage: Int = (total / PageSize) + 1
+  }
+
   object Deployments {
 
     def create(team: String,
@@ -41,8 +50,8 @@ object ES {
               serviceQuery: Option[String],
               buildIdQuery: Option[String],
               resultQuery: Option[DeploymentResult],
-              offset: Int
-              ) = Reader[JestClient, Seq[Deployment]] { jest =>
+              page: Int
+              ) = Reader[JestClient, Page[Deployment]] { jest =>
       val filters = Seq(
         teamQuery.map(x => s"""{ "match": { "team": "$x" } }"""),
         serviceQuery.map(x => s"""{ "match": { "service": "$x" } }"""),
@@ -51,8 +60,8 @@ object ES {
       ).flatten
       val query =
         s"""{
-           |  "from": $offset,
-           |  "size": 20,
+           |  "from": ${pageToOffset(page)},
+           |  "size": $PageSize,
            |  "query": {
            |    "bool": {
            |      "must": { "match_all": {} },
@@ -72,9 +81,9 @@ object ES {
         .addSort(new Sort("timestamp", Sorting.DESC))
         .build()
       val result = jest.execute(action)
-      result.getHits(classOf[JsonElement]).asScala
+      val items = result.getHits(classOf[JsonElement]).asScala
         .flatMap(hit => parseHit(hit.source, hit.id))
-      // TOOD return pagination info
+      Page(items, page, result.getTotal)
     }
 
     private def _create(team: String,
@@ -160,11 +169,11 @@ object ES {
         .headOption
     }
 
-    def list(offset: Int) = Reader[JestClient, Seq[ApiKey]] { jest =>
+    def list(page: Int) = Reader[JestClient, Seq[ApiKey]] { jest =>
       val query =
         s"""{
-           |  "from": $offset,
-           |  "size": 20,
+           |  "from": ${pageToOffset(page)},
+           |  "size": $PageSize,
            |  "query": { "match_all": {} }
            |}""".stripMargin
       val action = new Search.Builder(query)

@@ -29,12 +29,12 @@ class DeploymentsController(val authConfig: GoogleAuthConfig, val wsClient: WSCl
     Ok(views.html.index())
   }
 
-  def search(team: Option[String], service: Option[String], buildId: Option[String], result: Option[String], offset: Int) = AuthAction { request =>
+  def search(team: Option[String], service: Option[String], buildId: Option[String], result: Option[String], page: Int) = AuthAction { request =>
     implicit val user = request.user
     val (teamQuery, serviceQuery, buildIdQuery, resultQuery) =
       (team.filter(_.nonEmpty), service.filter(_.nonEmpty), buildId.filter(_.nonEmpty), result.flatMap(DeploymentResult.fromLowerCaseString))
-    val items = ES.Deployments.search(teamQuery, serviceQuery, buildIdQuery, resultQuery, offset).run(jestClient)
-    Ok(views.html.deployments.search(items, teamQuery, serviceQuery, buildIdQuery, resultQuery))
+    val searchResult = ES.Deployments.search(teamQuery, serviceQuery, buildIdQuery, resultQuery, page).run(jestClient)
+    Ok(views.html.deployments.search(searchResult.items, teamQuery, serviceQuery, buildIdQuery, resultQuery))
   }
 
   def create = ApiKeyAuthAction { implicit request =>
