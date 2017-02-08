@@ -29,3 +29,4 @@ deployment:
       - comms-ci-scripts/publish_docker_image.sh
       - comms-ci-scripts/deploy_to_ecs.sh -s shipit PRD aws/container-definition.json
       - comms-ci-scripts/comment_on_last_merged_pr.sh
+      - comms-ci-scripts/notify_shipit.sh
