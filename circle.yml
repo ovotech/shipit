@@ -9,6 +9,11 @@ dependencies:
     - sbt test:compile
     - if [ -e requirements.txt ]; then pip install -r requirements.txt;else pip install -r requirements.pip;fi
 
+test:
+  override:
+    - sbt test
+    - sbt docker:publishLocal
+
 deployment:
   uat_and_prd:
     branch: master
