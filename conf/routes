@@ -18,3 +18,5 @@ POST    /api-keys/:id/delete        controllers.ApiKeysController.delete(id)
 GET     /login                      controllers.AuthController.login
 GET     /oauth2callback             controllers.AuthController.oauth2Callback
 GET     /auth-error                 controllers.AuthController.authError
+
+GET     /assets/*file               controllers.Assets.at(path="/public", file)

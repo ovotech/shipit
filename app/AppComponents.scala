@@ -4,7 +4,7 @@ import akka.stream.scaladsl.Sink
 import com.amazonaws.auth._
 import com.amazonaws.auth.profile.ProfileCredentialsProvider
 import com.google.common.base.Supplier
-import controllers.{ApiKeysController, AuthController, DeploymentsController, MainController}
+import controllers._
 import kafka.{Graph, Serialization}
 import com.gu.googleauth.GoogleAuthConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
@@ -69,13 +69,15 @@ class AppComponents(context: Context)
   val apiKeysController = new ApiKeysController(googleAuthConfig, wsClient, jestClient)
   val deploymentsController = new DeploymentsController(googleAuthConfig, wsClient, deploymentsCtx)
   val authController = new AuthController(googleAuthConfig, wsClient)
+  val assets = new Assets(httpErrorHandler)
 
   lazy val router: Router = new Routes(
     httpErrorHandler,
     mainController,
     deploymentsController,
     apiKeysController,
-    authController
+    authController,
+    assets
   )
 
   override lazy val httpFilters: Seq[EssentialFilter] = Seq(csrfFilter)
