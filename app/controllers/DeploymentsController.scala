@@ -4,7 +4,6 @@ import java.time.OffsetDateTime
 
 import com.gu.googleauth.GoogleAuthConfig
 import es.ES
-import io.searchbox.client.JestClient
 import logic.Deployments
 import models.DeploymentResult.Succeeded
 import models.{DeploymentResult, Link}
@@ -12,6 +11,10 @@ import play.api.data.Form
 import play.api.data.Forms._
 import play.api.libs.ws.WSClient
 import play.api.mvc._
+
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
+
 
 class DeploymentsController(val authConfig: GoogleAuthConfig, val wsClient: WSClient, ctx: Deployments.Context)
   extends AuthActions
@@ -37,13 +40,13 @@ class DeploymentsController(val authConfig: GoogleAuthConfig, val wsClient: WSCl
     Ok(views.html.deployments.search(searchResult, teamQuery, serviceQuery, buildIdQuery, resultQuery))
   }
 
-  def create = ApiKeyAuthAction { implicit request =>
+  def create = ApiKeyAuthAction.async { implicit request =>
     DeploymentForm.bindFromRequest.fold(_ =>
-      BadRequest(
+      Future.successful(BadRequest(
         """You must include at least the following form fields in your POST: 'team', 'service', 'buildId'.
           |You may also one or more links (e.g. links[0][title]=PR, links[0][url]=http://github.com/my-pr)
           |and a 'result' field containing the result of the deployment ('succeeded', 'failed' or 'cancelled').""".stripMargin
-      ),
+      )),
       data => {
       Deployments.createDeployment(
         data.team,
@@ -53,7 +56,7 @@ class DeploymentsController(val authConfig: GoogleAuthConfig, val wsClient: WSCl
         data.links.getOrElse(Nil),
         data.result.getOrElse(Succeeded)
       ).run(ctx)
-      Ok("ok")
+       .map(_ => Ok("ok"))
     })
   }
 
