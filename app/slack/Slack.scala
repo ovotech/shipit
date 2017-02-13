@@ -33,8 +33,8 @@ object Slack {
        |{
        |  "attachments":[
        |    {
-       |      "fallback":"$message <https://shipit.ovotech.org.uk/search|See recent deployments>",
-       |      "pretext":"$message <https://shipit.ovotech.org.uk/search|See recent deployments>",
+       |      "fallback":"$message <https://shipit.ovotech.org.uk/deployments|See recent deployments>",
+       |      "pretext":"$message <https://shipit.ovotech.org.uk/deployments|See recent deployments>",
        |      "color":"$colour",
        |      "fields":[
        |        {
