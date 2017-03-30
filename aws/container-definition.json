@@ -15,6 +15,13 @@
         "containerPort": 9000,
         "hostPort": 0
       }
+    ],
+    "ulimits": [
+      {
+        "name": "nofile",
+        "softLimit": 16384,
+        "hardLimit": 16384
+      }
     ]
   }
 ]
