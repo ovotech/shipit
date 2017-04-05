@@ -54,6 +54,7 @@ class DeploymentsController(val authConfig: GoogleAuthConfig, val wsClient: WSCl
         data.buildId,
         OffsetDateTime.now(),
         data.links.getOrElse(Nil),
+        data.note,
         data.result.getOrElse(Succeeded)
       ).run(ctx)
        .map(_ => Ok("ok"))
@@ -69,6 +70,7 @@ object DeploymentsController {
     service: String,
     buildId: String,
     links: Option[List[Link]],
+    note: Option[String],
     result: Option[Product with Serializable with DeploymentResult]
   )
 
@@ -84,6 +86,7 @@ object DeploymentsController {
       "title" -> nonEmptyText,
       "url" -> nonEmptyText
     )(Link.apply)(Link.unapply))),
+    "note" -> optional(text),
     "result" -> optional(deploymentResult)
   )(DeploymentFormData.apply)(DeploymentFormData.unapply))
 

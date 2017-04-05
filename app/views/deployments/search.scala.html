@@ -54,7 +54,7 @@
 
   <table class="table table-striped">
     <thead>
-      <tr><th>Timestamp</th><th>Team</th><th>Service</th><th>Build ID</th><th>Result</th><th>Links</th></tr>
+      <tr><th>Timestamp</th><th>Team</th><th>Service</th><th>Build ID</th><th>Result</th><th>Links</th><th>Notes</th></tr>
     </thead>
     <tbody>
       @for(item <- page.items) {
@@ -70,6 +70,7 @@
               @if(i < item.links.size - 1) { , }
             }
           </td>
+          <td>@item.note</td>
         </tr>
       }
     </tbody>

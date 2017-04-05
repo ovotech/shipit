@@ -42,8 +42,9 @@ object ES {
                buildId: String,
                timestamp: OffsetDateTime,
                links: Seq[Link],
+               note: Option[String],
                result: DeploymentResult): Reader[JestClient, Deployment] =
-      executeAndRefresh(_create(team, service, buildId, timestamp, links, result))
+      executeAndRefresh(_create(team, service, buildId, timestamp, links, note, result))
 
     def search(
               teamQuery: Option[String],
@@ -91,6 +92,7 @@ object ES {
                 buildId: String,
                 timestamp: OffsetDateTime,
                 links: Seq[Link],
+                note: Option[String],
                 result: DeploymentResult) = Reader[JestClient, Deployment] { jest =>
       val linksList = links.map { link =>
         Map(
@@ -105,14 +107,15 @@ object ES {
         "timestamp" -> timestamp.toString,
         "links" -> linksList,
         "result" -> result.toString
-      )
+      ) ++
+        note.map("note" -> _)
       val action = new Index.Builder(map.asJava)
         .index(IndexName)
         .`type`(Types.Deployment)
         .build()
       val esResult = jest.execute(action)
       val id = esResult.getId
-      Deployment(id, team, service, buildId, timestamp, links, result)
+      Deployment(id, team, service, buildId, timestamp, links, note, result)
     }
 
     private def parseHit(jsonElement: JsonElement, id: String): Option[Deployment] = {

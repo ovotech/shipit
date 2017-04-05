@@ -25,7 +25,7 @@
     -d service=gateway-event-manager \
     -d buildId=123</pre>
 
-  <p>You can also include links if you want to. These will be displayed in the UI and also included in the Slack notification.</p>
+  <p>You can also include links and/or a short note if you want to. These will be displayed in the UI and also included in the Slack notification.</p>
 
   <p>For example:</p>
 
@@ -36,7 +36,8 @@
     -d 'links[0].title=CircleCI build' \
     -d 'links[0].url=https://circleci.com/gh/ovotech/comms-gateway-event-manager/123' \
     -d 'links[1].title=Pull request' \
-    -d 'links[1].url=https://github.com/ovotech/comms-gateway-event-manager/pull/42'</pre>
+    -d 'links[1].url=https://github.com/ovotech/comms-gateway-event-manager/pull/42' \
+    -d 'note=Build started by Chris'</pre>
 
   <p>Finally, you can also notify :shipit: about failed or cancelled builds:</p>
 
@@ -62,7 +63,7 @@
   "buildId": "123"
 }</pre>
 
-  <p>Just like for the HTTP POST, you can also include an optional list of links and a deployment result:</p>
+  <p>Just like for the HTTP POST, you can also include an optional list of links, an optional note and a deployment result:</p>
 
   <pre>{
   "team": "comms",
@@ -75,6 +76,7 @@
     "title": "Pull request",
     "url": "https://github.com/ovotech/comms-gateway-event-manager/pull/42"
   }],
+  "note": "Build started by Chris",
   "result": "failed"
 }</pre>
 

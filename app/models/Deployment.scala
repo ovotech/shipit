@@ -29,6 +29,7 @@ case class Deployment(
                    buildId: String,
                    timestamp: OffsetDateTime,
                    links: Seq[Link],
+                   note: Option[String],
                    result: DeploymentResult
                  )
 
