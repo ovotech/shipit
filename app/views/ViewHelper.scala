@@ -9,7 +9,9 @@ import models.{ApiKey, Deployment}
 object ViewHelper {
 
   def formatDate(offsetDateTime: OffsetDateTime): String =
-    offsetDateTime.atZoneSameInstant(ZoneOffset.UTC).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) + " GMT"
+    offsetDateTime
+      .atZoneSameInstant(ZoneOffset.UTC)
+      .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) + " GMT"
 
   def formatOptDate(opt: Option[OffsetDateTime]): String =
     opt.map(formatDate).getOrElse("(unknown)")
@@ -26,7 +28,7 @@ object ViewHelper {
 
   def resultBadge(deployment: Deployment) = deployment.result match {
     case Succeeded => <span class="label label-primary">Succeeded</span>
-    case Failed => <span class="label label-danger">Failed</span>
+    case Failed    => <span class="label label-danger">Failed</span>
     case Cancelled => <span class="label label-warning">Cancelled</span>
   }
 }

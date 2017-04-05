@@ -29,7 +29,8 @@ class AppComponents(context: Context)
 
   implicit val actorSys = actorSystem
 
-  def mandatoryConfig(key: String): String = configuration.getString(key).getOrElse(sys.error(s"Missing config key: $key"))
+  def mandatoryConfig(key: String): String =
+    configuration.getString(key).getOrElse(sys.error(s"Missing config key: $key"))
 
   val googleAuthConfig = GoogleAuthConfig(
     clientId = mandatoryConfig("google.clientId"),
@@ -39,37 +40,38 @@ class AppComponents(context: Context)
   )
 
   val jestClient: JestClient = {
-    val region = mandatoryConfig("aws.region")
+    val region  = mandatoryConfig("aws.region")
     val service = "es"
-    val url = mandatoryConfig("aws.es.endpointUrl")
+    val url     = mandatoryConfig("aws.es.endpointUrl")
     val awsCredentialsProvider = new AWSCredentialsProviderChain(
       new ContainerCredentialsProvider(),
       new ProfileCredentialsProvider()
     )
     val dateSupplier = new Supplier[LocalDateTime] { def get(): LocalDateTime = LocalDateTime.now(ZoneOffset.UTC) }
-    val awsSigner = new AWSSigner(awsCredentialsProvider, region, service, dateSupplier)
+    val awsSigner    = new AWSSigner(awsCredentialsProvider, region, service, dateSupplier)
     val factory = new JestClientFactory() {
       override protected def configureHttpClient(builder: HttpClientBuilder): HttpClientBuilder = {
         builder.addInterceptorLast(new AWSSigningRequestInterceptor(awsSigner))
         builder
       }
     }
-    factory.setHttpClientConfig(new HttpClientConfig.Builder(url)
-      .multiThreaded(true)
-      .build())
+    factory.setHttpClientConfig(
+      new HttpClientConfig.Builder(url)
+        .multiThreaded(true)
+        .build())
     factory.getObject
   }
 
   val slackWebhookUrl = mandatoryConfig("slack.webhookUrl")
-  val slackCtx = Slack.Context(wsClient, slackWebhookUrl)
+  val slackCtx        = Slack.Context(wsClient, slackWebhookUrl)
 
   val deploymentsCtx = Deployments.Context(jestClient, slackCtx)
 
-  val mainController = new MainController(googleAuthConfig, wsClient)
-  val apiKeysController = new ApiKeysController(googleAuthConfig, wsClient, jestClient)
+  val mainController        = new MainController(googleAuthConfig, wsClient)
+  val apiKeysController     = new ApiKeysController(googleAuthConfig, wsClient, jestClient)
   val deploymentsController = new DeploymentsController(googleAuthConfig, wsClient, deploymentsCtx)
-  val authController = new AuthController(googleAuthConfig, wsClient)
-  val assets = new Assets(httpErrorHandler)
+  val authController        = new AuthController(googleAuthConfig, wsClient)
+  val assets                = new Assets(httpErrorHandler)
 
   lazy val router: Router = new Routes(
     httpErrorHandler,
@@ -82,14 +84,13 @@ class AppComponents(context: Context)
 
   override lazy val httpFilters: Seq[EssentialFilter] = Seq(csrfFilter)
 
-  val kafkaHosts = mandatoryConfig("kafka.hosts")
+  val kafkaHosts   = mandatoryConfig("kafka.hosts")
   val kafkaGroupId = mandatoryConfig("kafka.group.id")
 
-  val kafkaGraph = Graph.build(
-    kafkaHosts,
-    kafkaGroupId,
-    mandatoryConfig("kafka.topics.deployments"),
-    Serialization.deploymentKafkaEventDeserializer){ event =>
+  val kafkaGraph = Graph.build(kafkaHosts,
+                               kafkaGroupId,
+                               mandatoryConfig("kafka.topics.deployments"),
+                               Serialization.deploymentKafkaEventDeserializer) { event =>
     Deployments.createDeploymentFromKafkaEvent(event).run(deploymentsCtx)
   }
 

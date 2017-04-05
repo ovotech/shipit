@@ -22,16 +22,17 @@ object Deployments {
   case class Context(jestClient: JestClient, slackCtx: Slack.Context)
 
   def createDeployment(team: String,
-               service: String,
-               buildId: String,
-               timestamp: OffsetDateTime,
-               links: Seq[Link],
-               note: Option[String],
-               result: DeploymentResult): Kleisli[Future, Context, Deployment] =
+                       service: String,
+                       buildId: String,
+                       timestamp: OffsetDateTime,
+                       links: Seq[Link],
+                       note: Option[String],
+                       result: DeploymentResult): Kleisli[Future, Context, Deployment] =
     for {
-      deployment <- ES.Deployments.create(team, service, buildId, timestamp, links, note, result)
-                      .local[Context](_.jestClient)
-                      .transform(FunctionK.lift[Id, Future](Future.successful))
+      deployment <- ES.Deployments
+        .create(team, service, buildId, timestamp, links, note, result)
+        .local[Context](_.jestClient)
+        .transform(FunctionK.lift[Id, Future](Future.successful))
       slackResp <- Slack.sendNotification(deployment).local[Context](_.slackCtx)
     } yield {
       Logger.info(s"Created deployment: $deployment")

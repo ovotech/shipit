@@ -15,9 +15,9 @@ object CirceDecoders {
 
   implicit val decodeDeploymentResult: Decoder[DeploymentResult] = Decoder.decodeString.emap {
     case "Succeeded" | "succeeded" => Right(Succeeded)
-    case "Failed" | "failed" => Right(Failed)
+    case "Failed" | "failed"       => Right(Failed)
     case "Cancelled" | "cancelled" => Right(Cancelled)
-    case other => Left(s"Unrecognised deployment result: $other")
+    case other                     => Left(s"Unrecognised deployment result: $other")
   }
 
 }

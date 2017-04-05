@@ -10,12 +10,14 @@ import play.api.mvc._
 import play.api.data._
 import play.api.data.Forms._
 
-class ApiKeysController(val authConfig: GoogleAuthConfig, val wsClient: WSClient, jestClient: JestClient) extends AuthActions with Controller {
+class ApiKeysController(val authConfig: GoogleAuthConfig, val wsClient: WSClient, jestClient: JestClient)
+    extends AuthActions
+    with Controller {
   import ApiKeysController._
 
   def list(page: Int) = AuthAction { implicit request =>
     implicit val user = request.user
-    val items = ES.ApiKeys.list(request.user.email, page).run(jestClient)
+    val items         = ES.ApiKeys.list(request.user.email, page).run(jestClient)
     Ok(views.html.apikeys.list(items))
   }
 
@@ -24,11 +26,13 @@ class ApiKeysController(val authConfig: GoogleAuthConfig, val wsClient: WSClient
     CreateKeyForm.bindFromRequest.fold(
       _ => Redirect(routes.ApiKeysController.list()).flashing("error" -> "Invalid request"),
       data => {
-        val apiKey = ES.ApiKeys.create(
-          key = UUID.randomUUID().toString,
-          description = data.description,
-          createdBy = user.email
-        ).run(jestClient)
+        val apiKey = ES.ApiKeys
+          .create(
+            key = UUID.randomUUID().toString,
+            description = data.description,
+            createdBy = user.email
+          )
+          .run(jestClient)
         Redirect(routes.ApiKeysController.list()).flashing("info" -> s"Created API key: ${apiKey.key}")
       }
     )
@@ -58,8 +62,9 @@ object ApiKeysController {
 
   case class CreateKeyFormData(description: Option[String])
 
-  val CreateKeyForm = Form(mapping(
-    "description" -> optional(text)
-  )(CreateKeyFormData.apply)(CreateKeyFormData.unapply))
+  val CreateKeyForm = Form(
+    mapping(
+      "description" -> optional(text)
+    )(CreateKeyFormData.apply)(CreateKeyFormData.unapply))
 
 }

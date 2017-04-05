@@ -11,7 +11,7 @@ object Serialization {
 
   val deploymentKafkaEventDeserializer = new Deserializer[Option[DeploymentKafkaEvent]] {
     def configure(configs: util.Map[String, _], isKey: Boolean) = {}
-    def close() = {}
+    def close()                                                 = {}
     def deserialize(topic: String, data: Array[Byte]) = {
       import io.circe.parser._
       import io.circe.generic.auto._
@@ -19,7 +19,7 @@ object Serialization {
       import cats.syntax.either._
 
       val either = for {
-        json <- parse(new String(data, StandardCharsets.UTF_8))
+        json  <- parse(new String(data, StandardCharsets.UTF_8))
         event <- json.as[DeploymentKafkaEvent]
       } yield event
 
