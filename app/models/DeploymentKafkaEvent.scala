@@ -5,6 +5,7 @@ case class DeploymentKafkaEvent(
                                  service: String,
                                  buildId: String,
                                  links: Option[List[Link]],
+                                 note: Option[String],
                                  result: Option[DeploymentResult]
                                )
 

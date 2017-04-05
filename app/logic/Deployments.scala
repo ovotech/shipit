@@ -26,9 +26,10 @@ object Deployments {
                buildId: String,
                timestamp: OffsetDateTime,
                links: Seq[Link],
+               note: Option[String],
                result: DeploymentResult): Kleisli[Future, Context, Deployment] =
     for {
-      deployment <- ES.Deployments.create(team, service, buildId, timestamp, links, result)
+      deployment <- ES.Deployments.create(team, service, buildId, timestamp, links, note, result)
                       .local[Context](_.jestClient)
                       .transform(FunctionK.lift[Id, Future](Future.successful))
       slackResp <- Slack.sendNotification(deployment).local[Context](_.slackCtx)
@@ -44,6 +45,7 @@ object Deployments {
       event.buildId,
       OffsetDateTime.now(),
       event.links.getOrElse(Nil),
+      event.note,
       event.result.getOrElse(Succeeded)
     )
 }
