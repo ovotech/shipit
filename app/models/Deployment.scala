@@ -8,14 +8,14 @@ sealed trait DeploymentResult
 
 object DeploymentResult {
   case object Succeeded extends DeploymentResult
-  case object Failed extends DeploymentResult
+  case object Failed    extends DeploymentResult
   case object Cancelled extends DeploymentResult
 
   def fromLowerCaseString(string: String) = string match {
     case "succeeded" => Some(Succeeded)
-    case "failed" => Some(Failed)
+    case "failed"    => Some(Failed)
     case "cancelled" => Some(Cancelled)
-    case _ => None
+    case _           => None
   }
 
   def toLowerCaseString(result: DeploymentResult) = result.toString.toLowerCase
@@ -23,13 +23,12 @@ object DeploymentResult {
 }
 
 case class Deployment(
-                   id: String,
-                   team: String,
-                   service: String,
-                   buildId: String,
-                   timestamp: OffsetDateTime,
-                   links: Seq[Link],
-                   note: Option[String],
-                   result: DeploymentResult
-                 )
-
+    id: String,
+    team: String,
+    service: String,
+    buildId: String,
+    timestamp: OffsetDateTime,
+    links: Seq[Link],
+    note: Option[String],
+    result: DeploymentResult
+)

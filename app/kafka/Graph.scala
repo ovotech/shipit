@@ -12,12 +12,8 @@ import scala.concurrent.Future
 
 object Graph {
 
-  def build[V, R](kafkaHosts: String,
-                  groupId: String,
-                  topic: String,
-                  deserializer: Deserializer[Option[V]])
-                 (processEvent: V => Future[R])
-                 (implicit actorSystem: ActorSystem): Source[R, Control] = {
+  def build[V, R](kafkaHosts: String, groupId: String, topic: String, deserializer: Deserializer[Option[V]])(
+      processEvent: V => Future[R])(implicit actorSystem: ActorSystem): Source[R, Control] = {
 
     Logger.info(s"Building graph hosts=[$kafkaHosts] groupId=[$groupId] topic=[$topic]")
 
@@ -25,12 +21,13 @@ object Graph {
       ConsumerSettings(actorSystem, new StringDeserializer, deserializer)
         .withBootstrapServers(kafkaHosts)
         .withGroupId(groupId)
-      .withMaxWakeups(50)
+        .withMaxWakeups(50)
 
-    Consumer.atMostOnceSource(consumerSettings, Subscriptions.topics(topic))
-        .flatMapConcat { record =>
-          Source[V](record.value().to[collection.immutable.Iterable])
-        }
+    Consumer
+      .atMostOnceSource(consumerSettings, Subscriptions.topics(topic))
+      .flatMapConcat { record =>
+        Source[V](record.value().to[collection.immutable.Iterable])
+      }
       .mapAsync(1)(processEvent)
   }
 

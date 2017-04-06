@@ -22,11 +22,11 @@ object ES {
 
   private val IndexName = "shipit"
   private object Types {
-    val ApiKey = "apikey"
+    val ApiKey     = "apikey"
     val Deployment = "deployment"
   }
 
-  private val PageSize = 20
+  private val PageSize                = 20
   private def pageToOffset(page: Int) = (page - 1) * PageSize
 
   case class Page[A](items: Seq[A], pageNumber: Int, total: Int) {
@@ -47,12 +47,12 @@ object ES {
       executeAndRefresh(_create(team, service, buildId, timestamp, links, note, result))
 
     def search(
-              teamQuery: Option[String],
-              serviceQuery: Option[String],
-              buildIdQuery: Option[String],
-              resultQuery: Option[DeploymentResult],
-              page: Int
-              ) = Reader[JestClient, Page[Deployment]] { jest =>
+        teamQuery: Option[String],
+        serviceQuery: Option[String],
+        buildIdQuery: Option[String],
+        resultQuery: Option[DeploymentResult],
+        page: Int
+    ) = Reader[JestClient, Page[Deployment]] { jest =>
       val filters = Seq(
         teamQuery.map(x => s"""{ "match": { "team": "$x" } }"""),
         serviceQuery.map(x => s"""{ "match": { "service": "$x" } }"""),
@@ -82,31 +82,33 @@ object ES {
         .addSort(new Sort("timestamp", Sorting.DESC))
         .build()
       val result = jest.execute(action)
-      val items = result.getHits(classOf[JsonElement]).asScala
+      val items = result
+        .getHits(classOf[JsonElement])
+        .asScala
         .flatMap(hit => parseHit(hit.source, hit.id))
       Page(items, page, result.getTotal)
     }
 
     private def _create(team: String,
-                service: String,
-                buildId: String,
-                timestamp: OffsetDateTime,
-                links: Seq[Link],
-                note: Option[String],
-                result: DeploymentResult) = Reader[JestClient, Deployment] { jest =>
+                        service: String,
+                        buildId: String,
+                        timestamp: OffsetDateTime,
+                        links: Seq[Link],
+                        note: Option[String],
+                        result: DeploymentResult) = Reader[JestClient, Deployment] { jest =>
       val linksList = links.map { link =>
         Map(
           "title" -> link.title,
-          "url" -> link.url
+          "url"   -> link.url
         ).asJava
       }.asJava
       val map = Map(
-        "team" -> team,
-        "service" -> service,
-        "buildId" -> buildId,
+        "team"      -> team,
+        "service"   -> service,
+        "buildId"   -> buildId,
         "timestamp" -> timestamp.toString,
-        "links" -> linksList,
-        "result" -> result.toString
+        "links"     -> linksList,
+        "result"    -> result.toString
       ) ++
         note.map("note" -> _)
       val action = new Index.Builder(map.asJava)
@@ -114,13 +116,13 @@ object ES {
         .`type`(Types.Deployment)
         .build()
       val esResult = jest.execute(action)
-      val id = esResult.getId
+      val id       = esResult.getId
       Deployment(id, team, service, buildId, timestamp, links, note, result)
     }
 
     private def parseHit(jsonElement: JsonElement, id: String): Option[Deployment] = {
       val either = for {
-        json <- parse(jsonElement.toString).right
+        json       <- parse(jsonElement.toString).right
         incomplete <- json.as[String => Deployment].right
       } yield incomplete.apply(id)
       either
@@ -132,28 +134,25 @@ object ES {
 
   object ApiKeys {
 
-    def create(key: String,
-               description: Option[String],
-               createdBy: String): Reader[JestClient, ApiKey] =
+    def create(key: String, description: Option[String], createdBy: String): Reader[JestClient, ApiKey] =
       executeAndRefresh(_create(key, description, createdBy))
 
-    private def _create(key: String,
-               description: Option[String],
-               createdBy: String) = Reader[JestClient, ApiKey] { jest =>
-      val createdAt = OffsetDateTime.now()
-      val map = Map(
-        "key" -> key,
-        "createdBy" -> createdBy,
-        "createdAt" -> createdAt.toString,
-        "active" -> true
-      ) ++ description.map("description" -> _)
-      val action = new Index.Builder(map.asJava)
-        .index(IndexName)
-        .`type`(Types.ApiKey)
-        .build()
-      val result = jest.execute(action)
-      val id = result.getId
-      ApiKey(id, key, description, createdAt, createdBy, active = true)
+    private def _create(key: String, description: Option[String], createdBy: String) = Reader[JestClient, ApiKey] {
+      jest =>
+        val createdAt = OffsetDateTime.now()
+        val map = Map(
+          "key"                            -> key,
+          "createdBy"                      -> createdBy,
+          "createdAt"                      -> createdAt.toString,
+          "active"                         -> true
+        ) ++ description.map("description" -> _)
+        val action = new Index.Builder(map.asJava)
+          .index(IndexName)
+          .`type`(Types.ApiKey)
+          .build()
+        val result = jest.execute(action)
+        val id     = result.getId
+        ApiKey(id, key, description, createdAt, createdBy, active = true)
     }
 
     def findByKey(key: String) = Reader[JestClient, Option[ApiKey]] { jest =>
@@ -167,7 +166,9 @@ object ES {
         .addType(Types.ApiKey)
         .build()
       val result = jest.execute(action)
-      result.getHits(classOf[JsonElement]).asScala
+      result
+        .getHits(classOf[JsonElement])
+        .asScala
         .flatMap(hit => parseHit(hit.source, hit.id))
         .headOption
     }
@@ -185,7 +186,9 @@ object ES {
         .addSort(new Sort("createdAt", Sorting.DESC))
         .build()
       val result = jest.execute(action)
-      result.getHits(classOf[JsonElement]).asScala
+      result
+        .getHits(classOf[JsonElement])
+        .asScala
         .flatMap(hit => parseHit(hit.source, hit.id))
     }
 
@@ -222,7 +225,7 @@ object ES {
 
     private def parseHit(jsonElement: JsonElement, id: String): Option[ApiKey] = {
       val either = for {
-        json <- parse(jsonElement.toString).right
+        json       <- parse(jsonElement.toString).right
         incomplete <- json.as[String => ApiKey].right
       } yield incomplete.apply(id)
       either
@@ -236,15 +239,16 @@ object ES {
     jest.execute(new Refresh.Builder().addIndex(IndexName).build())
   }
 
-  private def executeAndRefresh[A](action: Reader[JestClient, A]): Reader[JestClient, A] = for {
-    result <- action
-    _ <- refresh
-  } yield result
+  private def executeAndRefresh[A](action: Reader[JestClient, A]): Reader[JestClient, A] =
+    for {
+      result <- action
+      _      <- refresh
+    } yield result
 
   def initIndex: Reader[JestClient, Unit] = {
     for {
       alreadyExists <- doesIndexExist
-      _ <- createIndex(alreadyExists)
+      _             <- createIndex(alreadyExists)
     } yield ()
   }
 
@@ -254,8 +258,7 @@ object ES {
 
   private def createIndex(alreadyExists: Boolean) = Reader[JestClient, Unit] { jest =>
     if (!alreadyExists) {
-      jest.execute(new CreateIndex.Builder(IndexName).settings(
-        s"""
+      jest.execute(new CreateIndex.Builder(IndexName).settings(s"""
            |{
            |  "settings" : {
            |    "number_of_shards" : 1,
