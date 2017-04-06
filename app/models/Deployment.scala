@@ -26,6 +26,7 @@ case class Deployment(
     id: String,
     team: String,
     service: String,
+    jiraComponent: Option[String],
     buildId: String,
     timestamp: OffsetDateTime,
     links: Seq[Link],

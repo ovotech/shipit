@@ -39,6 +39,16 @@
     -d 'links[1].url=https://github.com/ovotech/comms-gateway-event-manager/pull/42' \
     -d 'note=Build started by Chris'</pre>
 
+  <p>If you want to create a JIRA ticket for the release, include a <code>jiraComponent</code> field containing the name of the appropriate JIRA component for the deployment.</p>
+
+  <p>For example:</p>
+
+  <pre>$ curl https://shipit.ovotech.org.uk/deployments?apikey=[your-key-here] \
+    -d team=comms \
+    -d service=gateway-event-manager \
+    -d buildId=123 \
+    -d 'jiraComponent=Comms Platform'</pre>
+
   <p>Finally, you can also notify :shipit: about failed or cancelled builds:</p>
 
   <pre>$ curl https://shipit.ovotech.org.uk/deployments?apikey=[your-key-here] \
@@ -63,7 +73,7 @@
   "buildId": "123"
 }</pre>
 
-  <p>Just like for the HTTP POST, you can also include an optional list of links, an optional note and a deployment result:</p>
+  <p>Just like for the HTTP POST, you can also include an optional list of links, an optional note, a JIRA component name and a deployment result:</p>
 
   <pre>{
   "team": "comms",
@@ -77,6 +87,7 @@
     "url": "https://github.com/ovotech/comms-gateway-event-manager/pull/42"
   }],
   "note": "Build started by Chris",
+  "jiraComponent": "Comms Platform",
   "result": "failed"
 }</pre>
 

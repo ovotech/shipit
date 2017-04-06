@@ -45,8 +45,9 @@ object Slack {
         .mkString(", ")
       Field("Links", value)
     }
-    val notesField: Option[Field] = deployment.note.map(Field("Notes", _))
-    val fields                    = List(Some(buildIdField), Some(linksField), notesField).flatten.mkString(",")
+    val notesField
+      : Option[Field] = deployment.note.map(Field("Notes", _)) // TODO build json payload properly to escape newlines etc
+    val fields        = List(Some(buildIdField), Some(linksField), notesField).flatten.mkString(",")
     s"""
        |{
        |  "attachments":[
