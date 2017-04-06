@@ -14,6 +14,7 @@ class SlackSpec extends FlatSpec with Matchers with OptionValues {
       id = "foo",
       team = "Team America",
       service = "my lovely service",
+      jiraComponent = None,
       buildId = "123",
       timestamp = OffsetDateTime.now,
       links = Seq(
@@ -24,7 +25,7 @@ class SlackSpec extends FlatSpec with Matchers with OptionValues {
       result = DeploymentResult.Succeeded
     )
     val payload = Slack.buildPayload(deployment)
-    val json = parse(payload).right.get
+    val json    = parse(payload).right.get
 
     val expectedJson = parse(
       """

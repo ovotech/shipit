@@ -10,6 +10,7 @@ import cats.instances.future._
 import scala.concurrent.ExecutionContext.Implicits.global
 import es.ES
 import io.searchbox.client.JestClient
+import jira.JIRA
 import models.DeploymentResult.Succeeded
 import models.{Deployment, DeploymentKafkaEvent, DeploymentResult, Link}
 import play.api.Logger
@@ -19,10 +20,11 @@ import scala.concurrent.Future
 
 object Deployments {
 
-  case class Context(jestClient: JestClient, slackCtx: Slack.Context)
+  case class Context(jestClient: JestClient, slackCtx: Slack.Context, jiraCtx: JIRA.Context)
 
   def createDeployment(team: String,
                        service: String,
+                       jiraComponent: Option[String],
                        buildId: String,
                        timestamp: OffsetDateTime,
                        links: Seq[Link],
@@ -30,12 +32,13 @@ object Deployments {
                        result: DeploymentResult): Kleisli[Future, Context, Deployment] =
     for {
       deployment <- ES.Deployments
-        .create(team, service, buildId, timestamp, links, note, result)
+        .create(team, service, jiraComponent, buildId, timestamp, links, note, result)
         .local[Context](_.jestClient)
         .transform(FunctionK.lift[Id, Future](Future.successful))
       slackResp <- Slack.sendNotification(deployment).local[Context](_.slackCtx)
+      jiraResp  <- JIRA.createIssueIfPossible(deployment).local[Context](_.jiraCtx)
     } yield {
-      Logger.info(s"Created deployment: $deployment")
+      Logger.info(s"Created deployment: $deployment. Slack response: $slackResp. JIRA response: $jiraResp")
       deployment
     }
 
@@ -43,6 +46,7 @@ object Deployments {
     createDeployment(
       event.team,
       event.service,
+      event.jiraComponent,
       event.buildId,
       OffsetDateTime.now(),
       event.links.getOrElse(Nil),

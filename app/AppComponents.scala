@@ -9,6 +9,7 @@ import kafka.{Graph, Serialization}
 import com.gu.googleauth.GoogleAuthConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.client.config.HttpClientConfig
+import jira.JIRA
 import logic.Deployments
 import models.DeploymentResult.Succeeded
 import org.apache.http.impl.client.HttpClientBuilder
@@ -65,7 +66,13 @@ class AppComponents(context: Context)
   val slackWebhookUrl = mandatoryConfig("slack.webhookUrl")
   val slackCtx        = Slack.Context(wsClient, slackWebhookUrl)
 
-  val deploymentsCtx = Deployments.Context(jestClient, slackCtx)
+  val jiraCtx = JIRA.Context(
+    wsClient,
+    mandatoryConfig("jira.createIssueApiUrl"),
+    mandatoryConfig("jira.username"),
+    mandatoryConfig("jira.password")
+  )
+  val deploymentsCtx = Deployments.Context(jestClient, slackCtx, jiraCtx)
 
   val mainController        = new MainController(googleAuthConfig, wsClient)
   val apiKeysController     = new ApiKeysController(googleAuthConfig, wsClient, jestClient)
