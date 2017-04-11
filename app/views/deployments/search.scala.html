@@ -1,7 +1,8 @@
-@(page: es.ES.Page[Deployment], team: Option[String], service: Option[String], buildId: Option[String], result: Option[DeploymentResult])(implicit user: com.gu.googleauth.UserIdentity)
+@(page: es.ES.Page[Deployment], team: Option[String], service: Option[String], buildId: Option[String], result: Option[DeploymentResult], showAdminColumn: Boolean)(implicit user: com.gu.googleauth.UserIdentity, request: RequestHeader)
 
 @import views.ViewHelper._
 @import models.DeploymentResult._
+@import helper._
 
 @main {
 
@@ -54,7 +55,7 @@
 
   <table class="table table-striped">
     <thead>
-      <tr><th>Timestamp</th><th>Team</th><th>Service</th><th>Build ID</th><th>Result</th><th>Links</th><th>Notes</th></tr>
+      <tr><th>Timestamp</th><th>Team</th><th>Service</th><th>Build ID</th><th>Result</th><th>Links</th><th>Notes</th>@if(showAdminColumn){<th>Danger zone</th>}</tr>
     </thead>
     <tbody>
       @for(item <- page.items) {
@@ -71,6 +72,12 @@
             }
           </td>
           <td>@item.note</td>
+          @if(showAdminColumn) {
+            <td>
+              <form id="delete_@item.id" method="post" action="@routes.DeploymentsController.delete(item.id)">@CSRF.formField</form>
+              <button form="delete_@item.id" class="btn btn-danger btn-sm">Delete</button>
+            </td>
+          }
         </tr>
       }
     </tbody>

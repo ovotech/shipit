@@ -20,13 +20,14 @@ object JIRA {
   def createIssueIfPossible(deployment: Deployment): Kleisli[Future, Context, Option[WSResponse]] = {
     deployment.jiraComponent match {
       case Some(jiraComponent) => createIssue(deployment, jiraComponent).map(_.some)
-      case None => Kleisli.pure[Future, Context, Option[WSResponse]](None)
+      case None                => Kleisli.pure[Future, Context, Option[WSResponse]](None)
     }
   }
 
   def createIssue(deployment: Deployment, jiraComponent: String) = Kleisli[Future, Context, WSResponse] { ctx =>
     val json = buildPayload(deployment, jiraComponent)
-    ctx.wsClient.url(ctx.createIssueApiUrl)
+    ctx.wsClient
+      .url(ctx.createIssueApiUrl)
       .withAuth(ctx.username, ctx.password, WSAuthScheme.BASIC)
       .withHeaders("Content-Type" -> "application/json")
       .post(json)
@@ -62,11 +63,11 @@ object JIRA {
 
     obj(
       "fields" -> obj(
-        "project" -> obj("key" -> "REL"),
-        "summary" -> summary,
+        "project"     -> obj("key" -> "REL"),
+        "summary"     -> summary,
         "description" -> description,
-        "issuetype" -> obj("name" -> "Standard Change"),
-        "components" -> List(obj("name" -> jiraComponent))
+        "issuetype"   -> obj("name" -> "Standard Change"),
+        "components"  -> List(obj("name" -> jiraComponent))
       )
     )
   }
