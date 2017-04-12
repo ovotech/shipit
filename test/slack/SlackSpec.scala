@@ -11,7 +11,7 @@ class SlackSpec extends FlatSpec with Matchers with OptionValues {
 
   it should "build a payload for a deployment with a note" in {
     val deployment = Deployment(
-      id = "foo",
+      id = Some("foo"),
       team = "Team America",
       service = "my lovely service",
       jiraComponent = None,

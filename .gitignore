@@ -20,3 +20,6 @@ project/plugins/project/
 # Local DynamoDB (for testing)
 dynamodb-local/
 # Created by .ignore support plugin (hsz.mobi)
+
+# intellij specific
+.idea

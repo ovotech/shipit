@@ -23,7 +23,7 @@ object DeploymentResult {
 }
 
 case class Deployment(
-    id: String,
+    id: Option[String],
     team: String,
     service: String,
     jiraComponent: Option[String],

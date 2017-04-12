@@ -121,7 +121,7 @@ object ES {
         .build()
       val esResult = jest.execute(action)
       val id       = esResult.getId
-      Deployment(id, team, service, jiraComponent, buildId, timestamp, links, note, result)
+      Deployment(Some(id), team, service, jiraComponent, buildId, timestamp, links, note, result)
     }
 
     private def parseHit(jsonElement: JsonElement, id: String): Option[Deployment] = {
