@@ -6,13 +6,14 @@ import cats.Id
 import cats.data.Kleisli
 import cats.arrow.FunctionK
 import cats.instances.future._
+import com.gu.googleauth.UserIdentity
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import es.ES
 import io.searchbox.client.JestClient
 import jira.JIRA
 import models.DeploymentResult.Succeeded
-import models.{Deployment, DeploymentKafkaEvent, DeploymentResult, Link}
+import models._
 import play.api.Logger
 import slack.Slack
 
@@ -20,7 +21,10 @@ import scala.concurrent.Future
 
 object Deployments {
 
-  case class Context(jestClient: JestClient, slackCtx: Slack.Context, jiraCtx: JIRA.Context)
+  case class Context(jestClient: JestClient,
+                     slackCtx: Slack.Context,
+                     jiraCtx: JIRA.Context,
+                     isAdmin: UserIdentity => Boolean)
 
   def createDeployment(team: String,
                        service: String,

@@ -35,15 +35,17 @@ class DeploymentsController(val authConfig: GoogleAuthConfig, val wsClient: WSCl
              service: Option[String],
              buildId: Option[String],
              result: Option[String],
-             page: Int) = AuthAction { request =>
-    implicit val user = request.user
+             page: Int) = AuthAction { implicit request =>
+    implicit val user   = request.user
+    val showAdminColumn = ctx.isAdmin(user)
     val (teamQuery, serviceQuery, buildIdQuery, resultQuery) =
       (team.filter(_.nonEmpty),
        service.filter(_.nonEmpty),
        buildId.filter(_.nonEmpty),
        result.flatMap(DeploymentResult.fromLowerCaseString))
     val searchResult = ES.Deployments.search(teamQuery, serviceQuery, buildIdQuery, resultQuery, page).run(jestClient)
-    Ok(views.html.deployments.search(searchResult, teamQuery, serviceQuery, buildIdQuery, resultQuery))
+    Ok(
+      views.html.deployments.search(searchResult, teamQuery, serviceQuery, buildIdQuery, resultQuery, showAdminColumn))
   }
 
   def create = ApiKeyAuthAction.async { implicit request =>
@@ -76,6 +78,17 @@ class DeploymentsController(val authConfig: GoogleAuthConfig, val wsClient: WSCl
           .map(_ => Ok("ok"))
       }
     )
+  }
+
+  def delete(id: String) = AuthAction { request =>
+    implicit val user = request.user
+    if (ctx.isAdmin(user)) {
+      if (ES.Deployments.delete(id).run(ctx.jestClient))
+        Ok(s"Deleted $id")
+      else
+        Ok("Failed to delete $id")
+    } else
+      Forbidden("Sorry, you're not cool enough")
   }
 
 }
