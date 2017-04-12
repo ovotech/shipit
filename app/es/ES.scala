@@ -90,6 +90,8 @@ object ES {
       Page(items, page, result.getTotal)
     }
 
+    def delete(id: String): Reader[JestClient, Boolean] = executeAndRefresh(_delete(id))
+
     private def _create(team: String,
                         service: String,
                         jiraComponent: Option[String],
@@ -132,6 +134,14 @@ object ES {
       either
         .leftMap(e => Logger.warn("Failed to decode deployment returned by ES", e))
         .toOption
+    }
+
+    private def _delete(id: String) = Reader[JestClient, Boolean] { jest =>
+      val action = new Delete.Builder(id)
+        .index(IndexName)
+        .`type`(Types.Deployment)
+        .build()
+      jest.execute(action).isSucceeded
     }
 
   }

@@ -1,4 +1,4 @@
-import java.time.{LocalDateTime, OffsetDateTime, ZoneOffset}
+import java.time.{LocalDateTime, ZoneOffset}
 
 import akka.stream.scaladsl.Sink
 import com.amazonaws.auth._
@@ -6,12 +6,11 @@ import com.amazonaws.auth.profile.ProfileCredentialsProvider
 import com.google.common.base.Supplier
 import controllers._
 import kafka.{Graph, Serialization}
-import com.gu.googleauth.GoogleAuthConfig
+import com.gu.googleauth.{GoogleAuthConfig, UserIdentity}
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.client.config.HttpClientConfig
 import jira.JIRA
 import logic.Deployments
-import models.DeploymentResult.Succeeded
 import org.apache.http.impl.client.HttpClientBuilder
 import play.api.ApplicationLoader.Context
 import play.api.routing.Router
@@ -22,6 +21,8 @@ import play.filters.csrf.CSRFComponents
 import router.Routes
 import slack.Slack
 import vc.inreach.aws.request.{AWSSigner, AWSSigningRequestInterceptor}
+
+import scala.collection.JavaConverters._
 
 class AppComponents(context: Context)
     extends BuiltInComponentsFromContext(context)
@@ -73,7 +74,17 @@ class AppComponents(context: Context)
     mandatoryConfig("jira.username"),
     mandatoryConfig("jira.password")
   )
-  val deploymentsCtx = Deployments.Context(jestClient, slackCtx, jiraCtx)
+
+  val isAdmin = {
+    val adminEmailAddresses = configuration
+      .getStringList("admin.emailAddresses")
+      .fold[Set[String]](Set.empty)(_.asScala.toSet)
+
+    (user: UserIdentity) =>
+      adminEmailAddresses.contains(user.email)
+  }
+
+  val deploymentsCtx = Deployments.Context(jestClient, slackCtx, jiraCtx, isAdmin)
 
   val mainController        = new MainController(googleAuthConfig, wsClient)
   val apiKeysController     = new ApiKeysController(googleAuthConfig, wsClient, jestClient)
