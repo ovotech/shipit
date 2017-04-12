@@ -74,8 +74,8 @@
           <td>@item.note</td>
           @if(showAdminColumn) {
             <td>
-              <form id="delete_@item.id" method="post" action="@routes.DeploymentsController.delete(item.id)">@CSRF.formField</form>
-              <button form="delete_@item.id" class="btn btn-danger btn-sm">Delete</button>
+              <form id="delete_@item.id.get" method="post" action="@routes.DeploymentsController.delete(item.id.get)">@CSRF.formField</form>
+              <button form="delete_@item.id.get" class="btn btn-danger btn-sm">Delete</button>
             </td>
           }
         </tr>

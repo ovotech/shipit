@@ -4,10 +4,9 @@ import java.time.OffsetDateTime
 
 import cats.Id
 import cats.arrow.FunctionK
+import cats.data.Kleisli
 import cats.instances.future._
 import com.gu.googleauth.UserIdentity
-
-import scala.concurrent.ExecutionContext.Implicits.global
 import es.ES
 import io.searchbox.client.JestClient
 import jira.JIRA
