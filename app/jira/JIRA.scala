@@ -15,7 +15,11 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 object JIRA {
 
-  case class Context(wsClient: WSClient, createIssueApiUrl: String, username: String, password: String)
+  case class Context(wsClient: WSClient,
+                     browseTicketsUrl: String,
+                     createIssueApiUrl: String,
+                     username: String,
+                     password: String)
 
   def createIssueIfPossible(deployment: Deployment): Kleisli[Future, Context, Option[WSResponse]] = {
     deployment.jiraComponent match {

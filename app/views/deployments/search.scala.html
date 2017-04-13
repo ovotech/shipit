@@ -1,4 +1,4 @@
-@(page: es.ES.Page[Deployment], team: Option[String], service: Option[String], buildId: Option[String], result: Option[DeploymentResult], showAdminColumn: Boolean)(implicit user: com.gu.googleauth.UserIdentity, request: RequestHeader)
+@(page: es.ES.Page[Identified[Deployment]], team: Option[String], service: Option[String], buildId: Option[String], result: Option[DeploymentResult], showAdminColumn: Boolean)(implicit user: com.gu.googleauth.UserIdentity, request: RequestHeader)
 
 @import views.ViewHelper._
 @import models.DeploymentResult._
@@ -60,18 +60,18 @@
     <tbody>
       @for(item <- page.items) {
         <tr>
-          <td><time class="timeago" datetime="@item.timestamp.toString">@formatDate(item.timestamp)</time></td>
-          <td>@item.team</td>
-          <td>@item.service</td>
-          <td>@item.buildId</td>
-          <td>@resultBadge(item)</td>
+          <td><time class="timeago" datetime="@item.value.timestamp.toString">@formatDate(item.value.timestamp)</time></td>
+          <td>@item.value.team</td>
+          <td>@item.value.service</td>
+          <td>@item.value.buildId</td>
+          <td>@resultBadge(item.value)</td>
           <td>
-            @for((link, i) <- item.links.zipWithIndex) {
+            @for((link, i) <- item.value.links.zipWithIndex) {
               <span><a href="@link.url" target="_blank">@link.title</a></span>
-              @if(i < item.links.size - 1) { , }
+              @if(i < item.value.links.size - 1) { , }
             }
           </td>
-          <td>@item.note</td>
+          <td>@item.value.note</td>
           @if(showAdminColumn) {
             <td>
               <form id="delete_@item.id" method="post" action="@routes.DeploymentsController.delete(item.id)">@CSRF.formField</form>

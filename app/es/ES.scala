@@ -37,15 +37,8 @@ object ES {
 
   object Deployments {
 
-    def create(team: String,
-               service: String,
-               jiraComponent: Option[String],
-               buildId: String,
-               timestamp: OffsetDateTime,
-               links: Seq[Link],
-               note: Option[String],
-               result: DeploymentResult): Reader[JestClient, Deployment] =
-      executeAndRefresh(_create(team, service, jiraComponent, buildId, timestamp, links, note, result))
+    def create(deployment: Deployment): Reader[JestClient, Identified[Deployment]] =
+      executeAndRefresh(_create(deployment))
 
     def search(
         teamQuery: Option[String],
@@ -53,7 +46,7 @@ object ES {
         buildIdQuery: Option[String],
         resultQuery: Option[DeploymentResult],
         page: Int
-    ) = Reader[JestClient, Page[Deployment]] { jest =>
+    ) = Reader[JestClient, Page[Identified[Deployment]]] { jest =>
       val filters = Seq(
         teamQuery.map(x => s"""{ "match": { "team": "$x" } }"""),
         serviceQuery.map(x => s"""{ "match": { "service": "$x" } }"""),
@@ -92,30 +85,23 @@ object ES {
 
     def delete(id: String): Reader[JestClient, Boolean] = executeAndRefresh(_delete(id))
 
-    private def _create(team: String,
-                        service: String,
-                        jiraComponent: Option[String],
-                        buildId: String,
-                        timestamp: OffsetDateTime,
-                        links: Seq[Link],
-                        note: Option[String],
-                        result: DeploymentResult) = Reader[JestClient, Deployment] { jest =>
-      val linksList = links.map { link =>
+    private def _create(deployment: Deployment) = Reader[JestClient, Identified[Deployment]] { jest =>
+      val linksList = deployment.links.map { link =>
         Map(
           "title" -> link.title,
           "url"   -> link.url
         ).asJava
       }.asJava
       val map = Map(
-        "team"      -> team,
-        "service"   -> service,
-        "buildId"   -> buildId,
-        "timestamp" -> timestamp.toString,
+        "team"      -> deployment.team,
+        "service"   -> deployment.service,
+        "buildId"   -> deployment.buildId,
+        "timestamp" -> deployment.timestamp.toString,
         "links"     -> linksList,
-        "result"    -> result.toString
+        "result"    -> deployment.result.toString
       ) ++
-        note.map("note"                   -> _) ++
-        jiraComponent.map("jiraComponent" -> _)
+        deployment.note.map("note"                   -> _) ++
+        deployment.jiraComponent.map("jiraComponent" -> _)
 
       val action = new Index.Builder(map.asJava)
         .index(IndexName)
@@ -123,16 +109,13 @@ object ES {
         .build()
       val esResult = jest.execute(action)
       val id       = esResult.getId
-      Deployment(id, team, service, jiraComponent, buildId, timestamp, links, note, result)
+      Identified(id, deployment)
     }
 
-    private def parseHit(jsonElement: JsonElement, id: String): Option[Deployment] = {
-      val either = for {
-        json       <- parse(jsonElement.toString).right
-        incomplete <- json.as[String => Deployment].right
-      } yield incomplete.apply(id)
-      either
+    private def parseHit(jsonElement: JsonElement, id: String): Option[Identified[Deployment]] = {
+      decode[Deployment](jsonElement.toString)
         .leftMap(e => Logger.warn("Failed to decode deployment returned by ES", e))
+        .map(value => Identified(id, value))
         .toOption
     }
 
