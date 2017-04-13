@@ -36,20 +36,20 @@ object Deployments {
                        note: Option[String],
                        result: DeploymentResult): Kleisli[Future, Context, Deployment] = {
 
-    val deployment = Deployment(None, team, service, jiraComponent, buildId, timestamp, links, note, result)
+    val deployment = Deployment(team, service, jiraComponent, buildId, timestamp, links, note, result)
 
     for {
       jiraResp     <- JIRA.createIssueIfPossible(deployment).local[Context](_.jiraCtx)
       updatedLinks <- buildLinks(deployment, jiraResp).local[Context](_.jiraCtx)
-      esDeployment <- ES.Deployments
+      identifiedDeployment <- ES.Deployments
         .create(team, service, jiraComponent, buildId, timestamp, updatedLinks, note, result)
         .local[Context](_.jestClient)
         .transform(FunctionK.lift[Id, Future](Future.successful))
-      slackResp <- Slack.sendNotification(esDeployment).local[Context](_.slackCtx)
+      slackResp <- Slack.sendNotification(deployment).local[Context](_.slackCtx)
 
     } yield {
-      Logger.info(s"Created deployment: $esDeployment. Slack response: $slackResp. JIRA response: $jiraResp")
-      esDeployment
+      Logger.info(s"Created deployment: $deployment. Slack response: $slackResp. JIRA response: $jiraResp")
+      deployment
     }
   }
 

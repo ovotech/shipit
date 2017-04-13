@@ -44,7 +44,7 @@ object ES {
                timestamp: OffsetDateTime,
                links: Seq[Link],
                note: Option[String],
-               result: DeploymentResult): Reader[JestClient, Deployment] =
+               result: DeploymentResult): Reader[JestClient, Identified[Deployment]] =
       executeAndRefresh(_create(team, service, jiraComponent, buildId, timestamp, links, note, result))
 
     def search(
@@ -53,7 +53,7 @@ object ES {
         buildIdQuery: Option[String],
         resultQuery: Option[DeploymentResult],
         page: Int
-    ) = Reader[JestClient, Page[Deployment]] { jest =>
+    ) = Reader[JestClient, Page[Identified[Deployment]]] { jest =>
       val filters = Seq(
         teamQuery.map(x => s"""{ "match": { "team": "$x" } }"""),
         serviceQuery.map(x => s"""{ "match": { "service": "$x" } }"""),
@@ -99,7 +99,7 @@ object ES {
                         timestamp: OffsetDateTime,
                         links: Seq[Link],
                         note: Option[String],
-                        result: DeploymentResult) = Reader[JestClient, Deployment] { jest =>
+                        result: DeploymentResult) = Reader[JestClient, Identified[Deployment]] { jest =>
       val linksList = links.map { link =>
         Map(
           "title" -> link.title,
@@ -123,16 +123,13 @@ object ES {
         .build()
       val esResult = jest.execute(action)
       val id       = esResult.getId
-      Deployment(Some(id), team, service, jiraComponent, buildId, timestamp, links, note, result)
+      Identified(id, Deployment(team, service, jiraComponent, buildId, timestamp, links, note, result))
     }
 
-    private def parseHit(jsonElement: JsonElement, id: String): Option[Deployment] = {
-      val either = for {
-        json       <- parse(jsonElement.toString).right
-        incomplete <- json.as[String => Deployment].right
-      } yield incomplete.apply(id)
-      either
+    private def parseHit(jsonElement: JsonElement, id: String): Option[Identified[Deployment]] = {
+      decode[Deployment](jsonElement.toString)
         .leftMap(e => Logger.warn("Failed to decode deployment returned by ES", e))
+        .map(value => Identified(id, value))
         .toOption
     }
 

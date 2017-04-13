@@ -11,7 +11,6 @@ class JIRASpec extends FlatSpec with Matchers with OptionValues {
 
   it should "build a payload for a deployment with a note" in {
     val deployment = Deployment(
-      id = Some("foo"),
       team = "Team America",
       service = "my lovely service",
       jiraComponent = Some("My Component"),
