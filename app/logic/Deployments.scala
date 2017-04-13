@@ -42,7 +42,7 @@ object Deployments {
       jiraResp     <- JIRA.createIssueIfPossible(deployment).local[Context](_.jiraCtx)
       updatedLinks <- buildLinks(deployment, jiraResp).local[Context](_.jiraCtx)
       identifiedDeployment <- ES.Deployments
-        .create(team, service, jiraComponent, buildId, timestamp, updatedLinks, note, result)
+        .create(deployment)
         .local[Context](_.jestClient)
         .transform(FunctionK.lift[Id, Future](Future.successful))
       slackResp <- Slack.sendNotification(deployment).local[Context](_.slackCtx)
