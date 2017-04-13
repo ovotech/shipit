@@ -39,17 +39,17 @@ object Deployments {
     val deployment = Deployment(team, service, jiraComponent, buildId, timestamp, links, note, result)
 
     for {
-      jiraResp     <- JIRA.createIssueIfPossible(deployment).local[Context](_.jiraCtx)
-      updatedLinks <- buildLinks(deployment, jiraResp).local[Context](_.jiraCtx)
+      jiraResp           <- JIRA.createIssueIfPossible(deployment).local[Context](_.jiraCtx)
+      enrichedDeployment <- enrichWithJiraInfo(deployment, jiraResp).local[Context](_.jiraCtx)
       identifiedDeployment <- ES.Deployments
-        .create(deployment)
+        .create(enrichedDeployment)
         .local[Context](_.jestClient)
         .transform(FunctionK.lift[Id, Future](Future.successful))
-      slackResp <- Slack.sendNotification(deployment).local[Context](_.slackCtx)
+      slackResp <- Slack.sendNotification(enrichedDeployment).local[Context](_.slackCtx)
 
     } yield {
-      Logger.info(s"Created deployment: $deployment. Slack response: $slackResp. JIRA response: $jiraResp")
-      deployment
+      Logger.info(s"Created deployment: $enrichedDeployment. Slack response: $slackResp. JIRA response: $jiraResp")
+      enrichedDeployment
     }
   }
 
@@ -65,16 +65,25 @@ object Deployments {
       event.result.getOrElse(Succeeded)
     )
 
-  def buildLinks(deployment: Deployment, jiraResponse: Option[WSResponse]) = Kleisli[Future, JIRA.Context, Seq[Link]] {
-    ctx =>
+  private def enrichWithJiraInfo(deployment: Deployment, jiraResponse: Option[WSResponse]) =
+    Kleisli[Future, JIRA.Context, Deployment] { ctx =>
       Future.successful(jiraResponse match {
-        case None => deployment.links
+        case None => deployment
         case Some(resp) =>
           resp.json.as[JsObject].value.get("key") match {
-            case None => deployment.links
+            case None => deployment
             case Some(key) =>
-              deployment.links ++ Seq(Link("Jira Ticket", ctx.browseTicketsUrl + key.as[String]))
+              Deployment(
+                deployment.team,
+                deployment.service,
+                deployment.jiraComponent,
+                deployment.buildId,
+                deployment.timestamp,
+                deployment.links ++ Seq(Link("Jira Ticket", ctx.browseTicketsUrl + key.as[String])),
+                deployment.note,
+                deployment.result
+              )
           }
       })
-  }
+    }
 }
