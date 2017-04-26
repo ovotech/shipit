@@ -83,7 +83,7 @@ object ES {
       Page(items, page, result.getTotal)
     }
 
-    def delete(id: String): Reader[JestClient, Boolean] = executeAndRefresh(_delete(id))
+    def delete(id: String): Reader[JestClient, Either[String, Unit]] = executeAndRefresh(_delete(id))
 
     private def _create(deployment: Deployment) = Reader[JestClient, Identified[Deployment]] { jest =>
       val linksList = deployment.links.map { link =>
@@ -119,12 +119,16 @@ object ES {
         .toOption
     }
 
-    private def _delete(id: String) = Reader[JestClient, Boolean] { jest =>
+    private def _delete(id: String) = Reader[JestClient, Either[String, Unit]] { jest =>
       val action = new Delete.Builder(id)
         .index(IndexName)
         .`type`(Types.Deployment)
         .build()
-      jest.execute(action).isSucceeded
+      val result = jest.execute(action)
+      if (result.isSucceeded)
+        Right(())
+      else
+        Left(result.getErrorMessage)
     }
 
   }

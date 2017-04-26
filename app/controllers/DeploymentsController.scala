@@ -83,10 +83,10 @@ class DeploymentsController(val authConfig: GoogleAuthConfig, val wsClient: WSCl
   def delete(id: String) = AuthAction { request =>
     implicit val user = request.user
     if (ctx.isAdmin(user)) {
-      if (ES.Deployments.delete(id).run(ctx.jestClient))
-        Ok(s"Deleted $id")
-      else
-        Ok("Failed to delete $id")
+      ES.Deployments.delete(id).run(ctx.jestClient) match {
+        case Left(errorMessage) => Ok(s"Failed to delete $id. Error message: $errorMessage")
+        case Right(_)           => Ok(s"Deleted $id")
+      }
     } else
       Forbidden("Sorry, you're not cool enough")
   }
