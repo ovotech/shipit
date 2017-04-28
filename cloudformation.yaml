@@ -47,6 +47,21 @@ Resources:
               Resource:
                 - !GetAtt ElasticsearchDomain.DomainArn
                 - !Sub "${ElasticsearchDomain.DomainArn}/*"
+        -
+          PolicyName: read-credstash
+          PolicyDocument:
+            Statement:
+            - Effect: Allow
+              Action:
+                - 'kms:Decrypt'
+              Resource:
+                - !Sub "arn:aws:kms:eu-west-1:${AWS::AccountId}:key/*"
+            - Effect: Allow
+              Action:
+                - 'dynamodb:GetItem'
+                - 'dynamodb:Query'
+              Resource:
+                - !Sub "arn:aws:dynamodb:eu-west-1:${AWS::AccountId}:table/credential-store"
 
   LoadBalancerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
