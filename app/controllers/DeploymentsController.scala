@@ -58,7 +58,8 @@ class DeploymentsController(val authConfig: GoogleAuthConfig, val wsClient: WSCl
             |- one or more links (e.g. links[0][title]=PR, links[0][url]=http://github.com/my-pr)
             |- a 'jiraComponent' field (only needed if you want shipit to create a JIRA release ticket for the deployment)
             |- a 'note' field containing any notes about the deployment
-            |- a 'result' field containing the result of the deployment ('succeeded', 'failed' or 'cancelled').
+            |- a 'result' field containing the result of the deployment ('succeeded', 'failed' or 'cancelled')
+            |- a 'notifySlackChannel' field containing an additional Slack channel that you want to notify (#announce_change will always be notified)
             |""".stripMargin
           )
       ),
@@ -72,7 +73,8 @@ class DeploymentsController(val authConfig: GoogleAuthConfig, val wsClient: WSCl
             OffsetDateTime.now(),
             data.links.getOrElse(Nil),
             data.note,
-            data.result.getOrElse(Succeeded)
+            data.result.getOrElse(Succeeded),
+            data.notifySlackChannel
           )
           .run(ctx)
           .map(_ => Ok("ok"))
@@ -102,7 +104,8 @@ object DeploymentsController {
       buildId: String,
       links: Option[List[Link]],
       note: Option[String],
-      result: Option[Product with Serializable with DeploymentResult]
+      result: Option[DeploymentResult with Product with Serializable], // doesn't compile unless you specify the type like this, no idea why
+      notifySlackChannel: Option[String]
   )
 
   private val deploymentResult = nonEmptyText
@@ -113,7 +116,7 @@ object DeploymentsController {
     mapping(
       "team"          -> nonEmptyText,
       "service"       -> nonEmptyText,
-      "jiraComponent" -> optional(text),
+      "jiraComponent" -> optional(nonEmptyText),
       "buildId"       -> nonEmptyText,
       "links" -> optional(
         list(
@@ -121,8 +124,9 @@ object DeploymentsController {
             "title" -> nonEmptyText,
             "url"   -> nonEmptyText
           )(Link.apply)(Link.unapply))),
-      "note"   -> optional(text),
-      "result" -> optional(deploymentResult)
+      "note"               -> optional(text),
+      "result"             -> optional(deploymentResult),
+      "notifySlackChannel" -> optional(nonEmptyText)
     )(DeploymentFormData.apply)(DeploymentFormData.unapply))
 
 }
