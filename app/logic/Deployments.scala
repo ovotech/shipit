@@ -5,6 +5,7 @@ import java.time.OffsetDateTime
 import cats.Id
 import cats.arrow.FunctionK
 import cats.data.Kleisli
+import cats.syntax.option._
 import cats.instances.future._
 import com.gu.googleauth.UserIdentity
 import es.ES
@@ -34,21 +35,23 @@ object Deployments {
                        timestamp: OffsetDateTime,
                        links: Seq[Link],
                        note: Option[String],
-                       result: DeploymentResult): Kleisli[Future, Context, Deployment] = {
+                       result: DeploymentResult,
+                       notifySlackChannel: Option[String]): Kleisli[Future, Context, Deployment] = {
 
     val deployment = Deployment(team, service, jiraComponent, buildId, timestamp, links, note, result)
 
     for {
       jiraResp           <- JIRA.createIssueIfPossible(deployment).local[Context](_.jiraCtx)
-      enrichedDeployment <- enrichWithJiraInfo(deployment, jiraResp).local[Context](_.jiraCtx)
-      identifiedDeployment <- ES.Deployments
-        .create(enrichedDeployment)
-        .local[Context](_.jestClient)
-        .transform(FunctionK.lift[Id, Future](Future.successful))
-      slackResp <- Slack.sendNotification(enrichedDeployment).local[Context](_.slackCtx)
-
+      enrichedDeployment <- enrichWithJiraInfo(deployment, jiraResp)
+      _                  <- persistToES(enrichedDeployment)
+      slackResp          <- sendMainSlackNotification(enrichedDeployment)
+      secondSlackResp    <- sendSlackNotificationToCustomChannel(enrichedDeployment, notifySlackChannel)
     } yield {
-      Logger.info(s"Created deployment: $enrichedDeployment. Slack response: $slackResp. JIRA response: $jiraResp")
+      Logger.info(
+        s"""
+           |Created deployment: $enrichedDeployment. First Slack response: $slackResp. Second Slack response: $secondSlackResp. JIRA response: $jiraResp
+         """.stripMargin
+      )
       enrichedDeployment
     }
   }
@@ -62,8 +65,15 @@ object Deployments {
       OffsetDateTime.now(),
       event.links.getOrElse(Nil),
       event.note,
-      event.result.getOrElse(Succeeded)
+      event.result.getOrElse(Succeeded),
+      event.notifySlackChannel
     )
+
+  private def persistToES(deployment: Deployment): Kleisli[Future, Context, Identified[Deployment]] =
+    ES.Deployments
+      .create(deployment)
+      .local[Context](_.jestClient)
+      .transform(FunctionK.lift[Id, Future](Future.successful))
 
   private def enrichWithJiraInfo(deployment: Deployment, jiraResponse: Option[WSResponse]) =
     Kleisli[Future, JIRA.Context, Deployment] { ctx =>
@@ -73,17 +83,21 @@ object Deployments {
           resp.json.as[JsObject].value.get("key") match {
             case None => deployment
             case Some(key) =>
-              Deployment(
-                deployment.team,
-                deployment.service,
-                deployment.jiraComponent,
-                deployment.buildId,
-                deployment.timestamp,
-                deployment.links ++ Seq(Link("Jira Ticket", ctx.browseTicketsUrl + key.as[String])),
-                deployment.note,
-                deployment.result
-              )
+              deployment.copy(links = deployment.links :+ Link("Jira Ticket", ctx.browseTicketsUrl + key.as[String]))
           }
       })
+    }.local[Context](_.jiraCtx)
+
+  private def sendMainSlackNotification(deployment: Deployment): Kleisli[Future, Context, WSResponse] =
+    Slack.sendNotification(deployment, channel = None).local[Context](_.slackCtx)
+
+  private def sendSlackNotificationToCustomChannel(
+      deployment: Deployment,
+      channel: Option[String]): Kleisli[Future, Context, Option[WSResponse]] = {
+    channel match {
+      case Some(ch) => Slack.sendNotification(deployment, channel = Some(ch)).local[Context](_.slackCtx).map(_.some)
+      case None     => Kleisli.pure[Future, Context, Option[WSResponse]](None)
     }
+  }
+
 }

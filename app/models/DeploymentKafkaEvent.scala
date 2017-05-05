@@ -7,5 +7,6 @@ case class DeploymentKafkaEvent(
     buildId: String,
     links: Option[List[Link]],
     note: Option[String],
-    result: Option[DeploymentResult]
+    result: Option[DeploymentResult],
+    notifySlackChannel: Option[String]
 )

@@ -49,6 +49,16 @@
     -d buildId=123 \
     -d 'jiraComponent=Comms Platform'</pre>
 
+  <p>:shipit: will always send a notification to the #announce_change Slack channel. You can also notify a custom channel if you want to. To do so, include a <code>notifySlackChannel</code> field in your POST.</p>
+
+  <p>For example:</p>
+
+  <pre>$ curl https://shipit.ovotech.org.uk/deployments?apikey=[your-key-here] \
+    -d team=comms \
+    -d service=gateway-event-manager \
+    -d buildId=123 \
+    -d notifySlackChannel=comms-deployments</pre>
+
   <p>Finally, you can also notify :shipit: about failed or cancelled builds:</p>
 
   <pre>$ curl https://shipit.ovotech.org.uk/deployments?apikey=[your-key-here] \
@@ -73,7 +83,7 @@
   "buildId": "123"
 }</pre>
 
-  <p>Just like for the HTTP POST, you can also include an optional list of links, an optional note, a JIRA component name and a deployment result:</p>
+  <p>You can also include all the same optional stuff as you can in the HTTP POST:</p>
 
   <pre>{
   "team": "comms",
@@ -88,7 +98,8 @@
   }],
   "note": "Build started by Chris",
   "jiraComponent": "Comms Platform",
-  "result": "failed"
+  "result": "failed",
+  "notifySlackChannel": "comms-deployments"
 }</pre>
 
 }
