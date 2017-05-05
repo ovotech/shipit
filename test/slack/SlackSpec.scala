@@ -2,10 +2,10 @@ package slack
 
 import java.time.OffsetDateTime
 
-import io.circe.Json
 import models.{Deployment, DeploymentResult, Link}
 import org.scalatest._
 import io.circe.parser._
+import play.api.libs.json.Json
 
 class SlackSpec extends FlatSpec with Matchers with OptionValues {
 
@@ -24,7 +24,7 @@ class SlackSpec extends FlatSpec with Matchers with OptionValues {
       result = DeploymentResult.Succeeded
     )
     val payload = Slack.buildPayload(deployment)
-    val json    = parse(payload).right.get
+    val json    = parse(Json.stringify(payload)).right.get
 
     val expectedJson = parse(
       """
@@ -48,7 +48,7 @@ class SlackSpec extends FlatSpec with Matchers with OptionValues {
         |       {
         |         "title": "Notes",
         |         "value": "this build was awesome",
-        |         "short": true
+        |         "short": false
         |       }
         |     ]
         |   }
