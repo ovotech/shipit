@@ -41,11 +41,11 @@ object Deployments {
     for {
       jiraResp           <- JIRA.createIssueIfPossible(deployment).local[Context](_.jiraCtx)
       enrichedDeployment <- enrichWithJiraInfo(deployment, jiraResp).local[Context](_.jiraCtx)
-      identifiedDeployment <- ES.Deployments
+      _ <- ES.Deployments
         .create(enrichedDeployment)
         .local[Context](_.jestClient)
         .transform(FunctionK.lift[Id, Future](Future.successful))
-      slackResp <- Slack.sendNotification(enrichedDeployment).local[Context](_.slackCtx)
+      slackResp <- Slack.sendNotification(enrichedDeployment, channel = None).local[Context](_.slackCtx)
 
     } yield {
       Logger.info(s"Created deployment: $enrichedDeployment. Slack response: $slackResp. JIRA response: $jiraResp")

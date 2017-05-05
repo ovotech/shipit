@@ -3,8 +3,8 @@ package slack
 import cats.data.Kleisli
 import models.Deployment
 import models.DeploymentResult.{Cancelled, Failed, Succeeded}
-import play.api.libs.json.{JsValue, Json}
-import play.api.libs.json.Json.{obj, arr}
+import play.api.libs.json.{JsString, JsValue, Json}
+import play.api.libs.json.Json.{arr, obj}
 import play.api.libs.ws.{WSClient, WSResponse}
 
 import scala.concurrent.Future
@@ -13,12 +13,12 @@ object Slack {
 
   case class Context(wsClient: WSClient, webhookUrl: String)
 
-  def sendNotification(deployment: Deployment) = Kleisli[Future, Context, WSResponse] { ctx =>
-    val json = buildPayload(deployment)
+  def sendNotification(deployment: Deployment, channel: Option[String]) = Kleisli[Future, Context, WSResponse] { ctx =>
+    val json = buildPayload(deployment, channel)
     ctx.wsClient.url(ctx.webhookUrl).post(Map("payload" -> Seq(Json.stringify(json))))
   }
 
-  def buildPayload(deployment: Deployment): JsValue = {
+  def buildPayload(deployment: Deployment, channel: Option[String]): JsValue = {
     val (message, colour) = deployment.result match {
       case Succeeded =>
         (s"Service [${deployment.team}/${deployment.service}] was deployed successfully.", "#00D000")
@@ -30,7 +30,7 @@ object Slack {
 
     val fields = buildFields(deployment)
 
-    obj(
+    val withoutChannel = obj(
       "attachments" -> arr(
         obj(
           "fallback" -> s"$message <https://shipit.ovotech.org.uk/deployments|See recent deployments>",
@@ -40,6 +40,8 @@ object Slack {
         )
       )
     )
+
+    channel.fold[JsValue](withoutChannel)(channel => withoutChannel + ("channel" -> JsString(channel)))
   }
 
   private def buildFields(deployment: Deployment) = {
