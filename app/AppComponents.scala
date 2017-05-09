@@ -70,7 +70,7 @@ class AppComponents(context: Context)
   val jiraCtx = JIRA.Context(
     wsClient,
     mandatoryConfig("jira.browseTicketsUrl"),
-    mandatoryConfig("jira.createIssueApiUrl"),
+    mandatoryConfig("jira.issueApiUrl"),
     mandatoryConfig("jira.username"),
     mandatoryConfig("jira.password")
   )
