@@ -42,7 +42,7 @@ object Deployments {
     val deployment = Deployment(team, service, jiraComponent, buildId, timestamp, links, note, result)
 
     for {
-      jiraResp           <- JIRA.createIssueIfPossible(deployment).local[Context](_.jiraCtx)
+      jiraResp           <- JIRA.createAndTransitionIssueIfPossible(deployment).local[Context](_.jiraCtx)
       enrichedDeployment <- enrichWithJiraInfo(deployment, jiraResp)
       _                  <- persistToES(enrichedDeployment)
       slackResp          <- sendMainSlackNotification(enrichedDeployment)

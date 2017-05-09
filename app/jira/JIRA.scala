@@ -28,19 +28,19 @@ object JIRA {
 
   implicit val issueReads = Json.reads[CreateIssueKey]
 
-  def createIssueIfPossible(deployment: Deployment): Kleisli[Future, Context, Option[CreateIssueKey]] = {
+  def createAndTransitionIssueIfPossible(deployment: Deployment): Kleisli[Future, Context, Option[CreateIssueKey]] = {
     deployment.jiraComponent match {
-      case Some(jiraComponent) => {
-
-        for {
-          issueKey <- createIssue(deployment, jiraComponent)
-          _        <- JiraTransitions.transition(issueKey, "Standard Change Approved")
-          _        <- JiraTransitions.transition(issueKey, "Implemented")
-        } yield issueKey
-
-      }
+      case Some(jiraComponent) => createAndTransitionIssue(deployment, jiraComponent)
       case None => Kleisli.pure[Future, Context, Option[CreateIssueKey]](None)
     }
+  }
+
+  def createAndTransitionIssue(deployment: Deployment, jiraComponent: String): Kleisli[Future, Context, Option[CreateIssueKey]] = {
+    for {
+      issueKey <- createIssue(deployment, jiraComponent)
+      _ <- JiraTransitions.transition(issueKey, "Standard Change Approved")
+      _ <- JiraTransitions.transition(issueKey, "Implemented")
+    } yield issueKey
   }
 
   def createIssue(deployment: Deployment, jiraComponent: String) = Kleisli[Future, Context, Option[CreateIssueKey]] {
