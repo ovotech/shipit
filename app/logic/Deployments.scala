@@ -11,6 +11,7 @@ import com.gu.googleauth.UserIdentity
 import es.ES
 import io.searchbox.client.JestClient
 import jira.JIRA
+import jira.JIRA.CreateIssueKey
 import models.DeploymentResult.Succeeded
 import models._
 import play.api.Logger
@@ -41,7 +42,7 @@ object Deployments {
     val deployment = Deployment(team, service, jiraComponent, buildId, timestamp, links, note, result)
 
     for {
-      jiraResp           <- JIRA.createIssueIfPossible(deployment).local[Context](_.jiraCtx)
+      jiraResp           <- JIRA.createAndTransitionIssueIfPossible(deployment).local[Context](_.jiraCtx)
       enrichedDeployment <- enrichWithJiraInfo(deployment, jiraResp)
       _                  <- persistToES(enrichedDeployment)
       slackResp          <- sendMainSlackNotification(enrichedDeployment)
@@ -75,16 +76,12 @@ object Deployments {
       .local[Context](_.jestClient)
       .transform(FunctionK.lift[Id, Future](Future.successful))
 
-  private def enrichWithJiraInfo(deployment: Deployment, jiraResponse: Option[WSResponse]) =
+  private def enrichWithJiraInfo(deployment: Deployment, issueKeyOpt: Option[CreateIssueKey]) =
     Kleisli[Future, JIRA.Context, Deployment] { ctx =>
-      Future.successful(jiraResponse match {
+      Future.successful(issueKeyOpt match {
         case None => deployment
-        case Some(resp) =>
-          resp.json.as[JsObject].value.get("key") match {
-            case None => deployment
-            case Some(key) =>
-              deployment.copy(links = deployment.links :+ Link("Jira Ticket", ctx.browseTicketsUrl + key.as[String]))
-          }
+        case Some(issueKey) =>
+          deployment.copy(links = deployment.links :+ Link("Jira Ticket", ctx.browseTicketsUrl + issueKey.key))
       })
     }.local[Context](_.jiraCtx)
 
