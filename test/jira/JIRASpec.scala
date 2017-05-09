@@ -1,6 +1,6 @@
 package jira
 
-import java.time.OffsetDateTime
+import java.time.{Clock, Instant, OffsetDateTime, ZoneId}
 
 import io.circe.parser._
 import models.{Deployment, DeploymentResult, Link}
@@ -23,8 +23,8 @@ class JIRASpec extends FlatSpec with Matchers with OptionValues {
       note = Some("this build was awesome"),
       result = DeploymentResult.Succeeded
     )
-    val payload = JIRA.buildPayload(deployment, "My Component")
-    val json    = parse(Json.stringify(payload)).right.get
+    val payload = JIRA.buildPayload(deployment, "My Component", OffsetDateTime.now(Clock.fixed(Instant.ofEpochMilli(1494326516000L), ZoneId.of("UTC"))))
+    val json = parse(Json.stringify(payload)).right.get
 
     val expectedJson = parse(
       """
@@ -42,7 +42,15 @@ class JIRASpec extends FlatSpec with Matchers with OptionValues {
         |      {
         |        "name": "My Component"
         |      }
-        |    ]
+        |    ],
+        |    "assignee" : {
+        |      "name" : "osp-service"
+        |    },
+        |    "customfield_10302" : "2017-05-09T10:41:56Z",
+        |    "customfield_11201" : "2017-05-09T10:41:56Z",
+        |    "customfield_10500" : "UAT / peer review",
+        |    "customfield_10301" : "Deploy using build pipeline. See links for more details",
+        |    "customfield_10300" : "Back out using build pipeline. See links for more details"
         |  }
         |}
       """.stripMargin

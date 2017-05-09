@@ -17,7 +17,7 @@ object JiraTransitions {
   case class Transition(id: String, name: String)
   case class Transitions(transitions: Set[Transition])
 
-  implicit val transitionReads = Json.reads[Transition]
+  implicit val transitionReads  = Json.reads[Transition]
   implicit val transitionsReads = Json.reads[Transitions]
 
   def transition(issueKeyOpt: Option[CreateIssueKey], transitionName: String) = {
@@ -34,42 +34,45 @@ object JiraTransitions {
     }
   }
 
-  private def getTransitionId(issueKey: String, transitionName: String) = Kleisli[Future, Context, Option[String]] { ctx =>
-    ctx.wsClient
-      .url(s"${ctx.issueApiUrl}/$issueKey/transitions")
-      .withAuth(ctx.username, ctx.password, WSAuthScheme.BASIC)
-      .withHeaders("Content-Type" -> "application/json")
-      .get()
-      .map(response => response.json.validate[Transitions] match {
-        case JsSuccess(transitions, _) => transitions.transitions.find(t => t.name == transitionName).map(_.id)
-        case JsError(errors) =>
-          Logger.error(s"Failed to deserialize jira transitions: $errors")
-          None
-      })
+  private def getTransitionId(issueKey: String, transitionName: String) = Kleisli[Future, Context, Option[String]] {
+    ctx =>
+      ctx.wsClient
+        .url(s"${ctx.issueApiUrl}/$issueKey/transitions")
+        .withAuth(ctx.username, ctx.password, WSAuthScheme.BASIC)
+        .withHeaders("Content-Type" -> "application/json")
+        .get()
+        .map(response =>
+          response.json.validate[Transitions] match {
+            case JsSuccess(transitions, _) => transitions.transitions.find(t => t.name == transitionName).map(_.id)
+            case JsError(errors) =>
+              Logger.error(s"Failed to deserialize jira transitions: $errors")
+              None
+        })
   }
 
-  private def performTransition(issueKey: String, transitionId: String) = Kleisli[Future, Context, Option[WSResponse]] { ctx =>
+  private def performTransition(issueKey: String, transitionId: String) =
+    Kleisli[Future, Context, Option[WSResponse]] { ctx =>
+      val payload = buildTransitionPayload(transitionId)
 
-    val payload = buildTransitionPayload(transitionId)
-
-    ctx.wsClient
-      .url(s"${ctx.issueApiUrl}/$issueKey/transitions")
-      .withAuth(ctx.username, ctx.password, WSAuthScheme.BASIC)
-      .withHeaders("Content-Type" -> "application/json")
-      .post(payload)
-      .map(_.some)
-  }
+      ctx.wsClient
+        .url(s"${ctx.issueApiUrl}/$issueKey/transitions")
+        .withAuth(ctx.username, ctx.password, WSAuthScheme.BASIC)
+        .withHeaders("Content-Type" -> "application/json")
+        .post(payload)
+        .map(_.some)
+    }
 
   private def buildTransitionPayload(transitionId: String): JsValue =
     obj(
       "transition" -> obj(
         "id" -> transitionId
       ),
-      "comment" -> List(obj(
-        "add" -> obj(
-          "body" -> "Transitioned by :shipit:"
-        )
-      ))
+      "comment" -> List(
+        obj(
+          "add" -> obj(
+            "body" -> "Transitioned by :shipit:"
+          )
+        ))
     )
 
 }

@@ -1,11 +1,13 @@
 package jira
 
+import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
+
 import cats.data.Kleisli
 import cats.instances.future._
 import cats.syntax.option._
 import models.Deployment
 import models.DeploymentResult.{Cancelled, Failed, Succeeded}
-import org.joda.time.DateTime
 import play.Logger
 import play.api.libs.json.Json.obj
 import play.api.libs.json._
@@ -15,8 +17,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 object JIRA {
-
-  import org.joda.time.format.ISODateTimeFormat
 
   case class Context(wsClient: WSClient,
                      browseTicketsUrl: String,
@@ -45,7 +45,7 @@ object JIRA {
 
   def createIssue(deployment: Deployment, jiraComponent: String) = Kleisli[Future, Context, Option[CreateIssueKey]] {
     ctx =>
-      val json = buildPayload(deployment, jiraComponent)
+      val json = buildPayload(deployment, jiraComponent, OffsetDateTime.now())
       ctx.wsClient
         .url(ctx.issueApiUrl)
         .withAuth(ctx.username, ctx.password, WSAuthScheme.BASIC)
@@ -59,7 +59,7 @@ object JIRA {
         })
   }
 
-  def buildPayload(deployment: Deployment, jiraComponent: String): JsValue = {
+  def buildPayload(deployment: Deployment, jiraComponent: String, currentTime: OffsetDateTime): JsValue = {
     val summary = deployment.result match {
       case Succeeded =>
         s"Service '${deployment.team}/${deployment.service}' was deployed successfully."
@@ -87,6 +87,8 @@ object JIRA {
          |
          |This ticket was created by :shipit: - [See recent deployments|https://shipit.ovotech.org.uk/deployments]""".stripMargin
 
+    val formattedTime = currentTime.format(DateTimeFormatter.ISO_DATE_TIME)
+
     obj(
       "fields" -> obj(
         "project"           -> obj("key" -> "REL"),
@@ -95,8 +97,8 @@ object JIRA {
         "issuetype"         -> obj("name" -> "Standard Change"),
         "components"        -> List(obj("name" -> jiraComponent)),
         "assignee"          -> obj("name" -> "osp-service"),
-        "customfield_10302" -> ISODateTimeFormat.dateTime.print(DateTime.now()),
-        "customfield_11201" -> ISODateTimeFormat.dateTime.print(DateTime.now()),
+        "customfield_10302" -> formattedTime,
+        "customfield_11201" -> formattedTime,
         "customfield_10500" -> "UAT / peer review",
         "customfield_10301" -> "Deploy using build pipeline. See links for more details",
         "customfield_10300" -> "Back out using build pipeline. See links for more details"
