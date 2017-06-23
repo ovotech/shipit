@@ -23,7 +23,10 @@ class JIRASpec extends FlatSpec with Matchers with OptionValues {
       note = Some("this build was awesome"),
       result = DeploymentResult.Succeeded
     )
-    val payload = JIRA.buildPayload(deployment, "My Component", OffsetDateTime.now(Clock.fixed(Instant.ofEpochMilli(1494326516000L), ZoneId.of("UTC"))))
+    val payload =
+      JIRA.buildPayload(deployment,
+                        "My Component",
+                        OffsetDateTime.now(Clock.fixed(Instant.ofEpochMilli(1494326516000L), ZoneId.of("UTC"))))
     val json = parse(Json.stringify(payload)).right.get
 
     val expectedJson = parse(

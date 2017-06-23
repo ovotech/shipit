@@ -11,8 +11,6 @@ class AppLoader extends ApplicationLoader {
 
     ES.initIndex.run(components.jestClient)
 
-    components.startKafkaConsumer()
-
     components.application
   }
 
