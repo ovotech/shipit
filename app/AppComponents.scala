@@ -5,7 +5,6 @@ import com.amazonaws.auth._
 import com.amazonaws.auth.profile.ProfileCredentialsProvider
 import com.google.common.base.Supplier
 import controllers._
-import kafka.{Graph, Serialization}
 import com.gu.googleauth.{GoogleAuthConfig, UserIdentity}
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.client.config.HttpClientConfig
@@ -102,21 +101,5 @@ class AppComponents(context: Context)
   )
 
   override lazy val httpFilters: Seq[EssentialFilter] = Seq(csrfFilter)
-
-  val kafkaHosts   = mandatoryConfig("kafka.hosts")
-  val kafkaGroupId = mandatoryConfig("kafka.group.id")
-
-  val kafkaGraph = Graph.build(kafkaHosts,
-                               kafkaGroupId,
-                               mandatoryConfig("kafka.topics.deployments"),
-                               Serialization.deploymentKafkaEventDeserializer) { event =>
-    Deployments.createDeploymentFromKafkaEvent(event).run(deploymentsCtx)
-  }
-
-  def startKafkaConsumer(): Unit = {
-    Logger.info("Starting Kafka consumer")
-
-    kafkaGraph.runWith(Sink.ignore)
-  }
 
 }

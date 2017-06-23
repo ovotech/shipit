@@ -57,19 +57,6 @@ object Deployments {
     }
   }
 
-  def createDeploymentFromKafkaEvent(event: DeploymentKafkaEvent): Kleisli[Future, Context, Deployment] =
-    createDeployment(
-      event.team,
-      event.service,
-      event.jiraComponent,
-      event.buildId,
-      OffsetDateTime.now(),
-      event.links.getOrElse(Nil),
-      event.note,
-      event.result.getOrElse(Succeeded),
-      event.notifySlackChannel
-    )
-
   private def persistToES(deployment: Deployment): Kleisli[Future, Context, Identified[Deployment]] =
     ES.Deployments
       .create(deployment)

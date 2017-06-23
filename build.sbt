@@ -1,12 +1,11 @@
 organization := "com.ovoenergy"
-scalaVersion := "2.11.8"
+scalaVersion := "2.11.11"
 
 libraryDependencies ++= Seq(
   ws,
   filters,
   "io.circe" %% "circe-parser" % "0.7.0",
   "io.circe" %% "circe-generic" % "0.7.0",
-  "com.typesafe.akka" %% "akka-stream-kafka" % "0.13",
   "com.typesafe.akka" %% "akka-slf4j" % "2.4.16",
   "org.typelevel" %% "cats-core" % "0.9.0",
   "com.gu" %% "play-googleauth" % "0.6.0",
