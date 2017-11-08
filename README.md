@@ -9,3 +9,7 @@
 ## How to run locally
 
 Export all necessary environment variables (see `conf/application.conf`). Then `sbt run`.
+
+## Documentation
+
+See https://shipit.ovotech.org.uk/guide
