@@ -71,7 +71,7 @@
               @if(i < item.value.links.size - 1) { , }
             }
           </td>
-          <td>@item.value.note</td>
+          <td><pre>@item.value.note</pre></td>
           @if(showAdminColumn) {
             <td>
               <form id="delete_@item.id" method="post" action="@routes.DeploymentsController.delete(item.id)">@CSRF.formField</form>
