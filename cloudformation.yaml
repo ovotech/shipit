@@ -157,9 +157,9 @@ Resources:
         EBSEnabled: true
         VolumeSize: 10
       ElasticsearchClusterConfig:
-        InstanceCount: 1
-        InstanceType: t2.micro.elasticsearch
-      ElasticsearchVersion: "2.3"
+        InstanceCount: 2
+        InstanceType: t2.small.elasticsearch
+      ElasticsearchVersion: "5.5"
       Tags:
         - Key: Environment
           Value:

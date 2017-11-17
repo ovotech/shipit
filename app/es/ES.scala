@@ -80,7 +80,7 @@ object ES {
         .getHits(classOf[JsonElement])
         .asScala
         .flatMap(hit => parseHit(hit.source, hit.id))
-      Page(items, page, result.getTotal)
+      Page(items, page, result.getTotal.toInt)
     }
 
     def delete(id: String): Reader[JestClient, Either[String, Unit]] = executeAndRefresh(_delete(id))
@@ -263,7 +263,7 @@ object ES {
            |{
            |  "settings" : {
            |    "number_of_shards" : 1,
-           |    "number_of_replicas" : 0
+           |    "number_of_replicas" : 1
            |  },
            |  "mappings" : {
            |    "${Types.ApiKey}" : {

@@ -44,8 +44,7 @@ class DeploymentsController(val authConfig: GoogleAuthConfig, val wsClient: WSCl
        buildId.filter(_.nonEmpty),
        result.flatMap(DeploymentResult.fromLowerCaseString))
     val searchResult = ES.Deployments.search(teamQuery, serviceQuery, buildIdQuery, resultQuery, page).run(jestClient)
-    Ok(
-      views.html.deployments.search(searchResult, teamQuery, serviceQuery, buildIdQuery, resultQuery, showAdminColumn))
+    Ok(views.html.deployments.search(searchResult, teamQuery, serviceQuery, buildIdQuery, resultQuery, showAdminColumn))
   }
 
   def create = ApiKeyAuthAction.async { implicit request =>
