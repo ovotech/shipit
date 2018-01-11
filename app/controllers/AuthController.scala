@@ -1,10 +1,19 @@
 package controllers
 
-import com.gu.googleauth.GoogleAuthConfig
+import com.gu.googleauth.{GoogleAuthConfig, LoginSupport}
 import play.api.libs.ws.WSClient
 import play.api.mvc._
 
-class AuthController(val authConfig: GoogleAuthConfig, val wsClient: WSClient) extends AuthActions with Controller {
+import scala.concurrent.ExecutionContext
+
+class AuthController(controllerComponents: ControllerComponents,
+                     val authConfig: GoogleAuthConfig,
+                     val wsClient: WSClient)(implicit ec: ExecutionContext)
+    extends AbstractController(controllerComponents)
+    with LoginSupport {
+
+  override val defaultRedirectTarget = routes.MainController.index()
+  override val failureRedirectTarget = routes.AuthController.authError()
 
   def login = Action.async { implicit request =>
     startGoogleLogin()

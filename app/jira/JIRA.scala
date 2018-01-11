@@ -50,7 +50,7 @@ object JIRA {
       ctx.wsClient
         .url(ctx.issueApiUrl)
         .withAuth(ctx.username, ctx.password, WSAuthScheme.BASIC)
-        .withHeaders("Content-Type" -> "application/json")
+        .withHttpHeaders("Content-Type" -> "application/json")
         .post(json)
         .map(_.json.validate[CreateIssueKey] match {
           case JsSuccess(issueKey, _) => issueKey.some

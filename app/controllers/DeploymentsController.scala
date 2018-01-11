@@ -2,7 +2,7 @@ package controllers
 
 import java.time.OffsetDateTime
 
-import com.gu.googleauth.GoogleAuthConfig
+import com.gu.googleauth.{AuthAction, GoogleAuthConfig, UserIdentity}
 import es.ES
 import logic.Deployments
 import models.DeploymentResult.Succeeded
@@ -12,13 +12,16 @@ import play.api.data.Forms._
 import play.api.libs.ws.WSClient
 import play.api.mvc._
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class DeploymentsController(val authConfig: GoogleAuthConfig, val wsClient: WSClient, ctx: Deployments.Context)
-    extends AuthActions
-    with ApiKeyAuth
-    with Controller {
+class DeploymentsController(controllerComponents: ControllerComponents,
+                            authAction: AuthAction[AnyContent],
+                            apiKeyAuth: ApiKeyAuth,
+                            val authConfig: GoogleAuthConfig,
+                            val wsClient: WSClient,
+                            ctx: Deployments.Context)(implicit val ec: ExecutionContext)
+    extends AbstractController(controllerComponents) {
 
   import DeploymentsController._
 
@@ -26,8 +29,8 @@ class DeploymentsController(val authConfig: GoogleAuthConfig, val wsClient: WSCl
 
   val healthcheck = Action { Ok("OK") }
 
-  val index = AuthAction { request =>
-    implicit val user = request.user
+  val index = authAction { request =>
+    implicit val user: UserIdentity = request.user
     Ok(views.html.index())
   }
 
@@ -35,9 +38,9 @@ class DeploymentsController(val authConfig: GoogleAuthConfig, val wsClient: WSCl
              service: Option[String],
              buildId: Option[String],
              result: Option[String],
-             page: Int) = AuthAction { implicit request =>
-    implicit val user   = request.user
-    val showAdminColumn = ctx.isAdmin(user)
+             page: Int) = authAction { implicit request =>
+    implicit val user: UserIdentity = request.user
+    val showAdminColumn             = ctx.isAdmin(user)
     val (teamQuery, serviceQuery, buildIdQuery, resultQuery) =
       (team.filter(_.nonEmpty),
        service.filter(_.nonEmpty),
@@ -47,7 +50,7 @@ class DeploymentsController(val authConfig: GoogleAuthConfig, val wsClient: WSCl
     Ok(views.html.deployments.search(searchResult, teamQuery, serviceQuery, buildIdQuery, resultQuery, showAdminColumn))
   }
 
-  def create = ApiKeyAuthAction.async { implicit request =>
+  def create = apiKeyAuth.ApiKeyAuthAction.async { implicit request =>
     DeploymentForm.bindFromRequest.fold(
       _ =>
         Future.successful(
@@ -81,8 +84,8 @@ class DeploymentsController(val authConfig: GoogleAuthConfig, val wsClient: WSCl
     )
   }
 
-  def delete(id: String) = AuthAction { request =>
-    implicit val user = request.user
+  def delete(id: String) = authAction { request =>
+    implicit val user: UserIdentity = request.user
     if (ctx.isAdmin(user)) {
       ES.Deployments.delete(id).run(ctx.jestClient) match {
         case Left(errorMessage) => Ok(s"Failed to delete $id. Error message: $errorMessage")

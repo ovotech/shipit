@@ -4,14 +4,14 @@ import es.ES
 import io.searchbox.client.JestClient
 import play.api.mvc._
 
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{ExecutionContext, Future}
 
-trait ApiKeyAuth {
-
-  def jestClient: JestClient
+class ApiKeyAuth(jestClient: JestClient, actionBuilder: DefaultActionBuilder)(implicit ec: ExecutionContext) {
 
   object CheckApiKey extends ActionFilter[Request] with Results {
+
+    override def executionContext: ExecutionContext = ec
+
     override protected def filter[A](request: Request[A]): Future[Option[Result]] = Future {
       request.getQueryString("apikey") match {
         case Some(key) =>
@@ -28,5 +28,6 @@ trait ApiKeyAuth {
     }
   }
 
-  val ApiKeyAuthAction = Action andThen CheckApiKey
+  val ApiKeyAuthAction: ActionBuilder[Request, AnyContent] = actionBuilder andThen CheckApiKey
+
 }
