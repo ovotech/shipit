@@ -21,7 +21,10 @@ libraryDependencies ++= Seq(
 
 val testReportsDir = sys.env.getOrElse("CI_REPORTS", "target/reports")
 testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oF", "-u", testReportsDir)
-credstashInputDir := file("conf")
 enablePlugins(PlayScala, DockerPlugin)
 
 scalafmtOnCompile in ThisBuild := true
+
+credstashInputDir := file("conf")
+commsPackagingAwsAccountId := "852955754882"
+commsPackagingDownloadAivenStuffAtStartup := false
