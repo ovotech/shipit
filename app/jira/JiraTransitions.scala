@@ -39,7 +39,7 @@ object JiraTransitions {
       ctx.wsClient
         .url(s"${ctx.issueApiUrl}/$issueKey/transitions")
         .withAuth(ctx.username, ctx.password, WSAuthScheme.BASIC)
-        .withHeaders("Content-Type" -> "application/json")
+        .withHttpHeaders("Content-Type" -> "application/json")
         .get()
         .map(response =>
           response.json.validate[Transitions] match {
@@ -57,7 +57,7 @@ object JiraTransitions {
       ctx.wsClient
         .url(s"${ctx.issueApiUrl}/$issueKey/transitions")
         .withAuth(ctx.username, ctx.password, WSAuthScheme.BASIC)
-        .withHeaders("Content-Type" -> "application/json")
+        .withHttpHeaders("Content-Type" -> "application/json")
         .post(payload)
         .map(_.some)
     }

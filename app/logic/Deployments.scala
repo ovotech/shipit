@@ -61,7 +61,7 @@ object Deployments {
     ES.Deployments
       .create(deployment)
       .local[Context](_.jestClient)
-      .transform(FunctionK.lift[Id, Future](Future.successful))
+      .mapK(FunctionK.lift[Id, Future](Future.successful))
 
   private def enrichWithJiraInfo(deployment: Deployment, issueKeyOpt: Option[CreateIssueKey]) =
     Kleisli[Future, JIRA.Context, Deployment] { ctx =>

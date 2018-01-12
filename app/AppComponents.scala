@@ -1,11 +1,11 @@
 import java.time.{LocalDateTime, ZoneOffset}
 
-import akka.stream.scaladsl.Sink
+import akka.actor.ActorSystem
 import com.amazonaws.auth._
 import com.amazonaws.auth.profile.ProfileCredentialsProvider
 import com.google.common.base.Supplier
 import controllers._
-import com.gu.googleauth.{GoogleAuthConfig, UserIdentity}
+import com.gu.googleauth.{AntiForgeryChecker, AuthAction, GoogleAuthConfig, UserIdentity}
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.client.config.HttpClientConfig
 import jira.JIRA
@@ -15,29 +15,31 @@ import play.api.ApplicationLoader.Context
 import play.api.routing.Router
 import play.api.{BuiltInComponentsFromContext, Logger}
 import play.api.libs.ws.ahc.AhcWSComponents
-import play.api.mvc.EssentialFilter
+import play.api.mvc.{AnyContent, EssentialFilter}
+import play.filters.HttpFiltersComponents
 import play.filters.csrf.CSRFComponents
 import router.Routes
 import slack.Slack
 import vc.inreach.aws.request.{AWSSigner, AWSSigningRequestInterceptor}
 
-import scala.collection.JavaConverters._
-
 class AppComponents(context: Context)
     extends BuiltInComponentsFromContext(context)
     with AhcWSComponents
-    with CSRFComponents {
+    with CSRFComponents
+    with HttpFiltersComponents
+    with AssetsComponents {
 
-  implicit val actorSys = actorSystem
+  implicit val actorSys: ActorSystem = actorSystem
 
   def mandatoryConfig(key: String): String =
-    configuration.getString(key).getOrElse(sys.error(s"Missing config key: $key"))
+    configuration.get[Option[String]](key).getOrElse(sys.error(s"Missing config key: $key"))
 
   val googleAuthConfig = GoogleAuthConfig(
     clientId = mandatoryConfig("google.clientId"),
     clientSecret = mandatoryConfig("google.clientSecret"),
     redirectUrl = mandatoryConfig("google.redirectUrl"),
-    domain = "ovoenergy.com"
+    domain = "ovoenergy.com",
+    antiForgeryChecker = AntiForgeryChecker.borrowSettingsFromPlay(httpConfiguration)
   )
 
   val jestClient: JestClient = {
@@ -45,7 +47,7 @@ class AppComponents(context: Context)
     val service = "es"
     val url     = mandatoryConfig("aws.es.endpointUrl")
     val awsCredentialsProvider = new AWSCredentialsProviderChain(
-      new ContainerCredentialsProvider(),
+      new EC2ContainerCredentialsProviderWrapper(),
       new ProfileCredentialsProvider()
     )
     val dateSupplier = new Supplier[LocalDateTime] { def get(): LocalDateTime = LocalDateTime.now(ZoneOffset.UTC) }
@@ -76,8 +78,8 @@ class AppComponents(context: Context)
 
   val isAdmin = {
     val adminEmailAddresses = configuration
-      .getStringList("admin.emailAddresses")
-      .fold[Set[String]](Set.empty)(_.asScala.toSet)
+      .get[Option[Seq[String]]]("admin.emailAddresses")
+      .fold[Set[String]](Set.empty)(_.toSet)
 
     (user: UserIdentity) =>
       adminEmailAddresses.contains(user.email)
@@ -85,11 +87,18 @@ class AppComponents(context: Context)
 
   val deploymentsCtx = Deployments.Context(jestClient, slackCtx, jiraCtx, isAdmin)
 
-  val mainController        = new MainController(googleAuthConfig, wsClient)
-  val apiKeysController     = new ApiKeysController(googleAuthConfig, wsClient, jestClient)
-  val deploymentsController = new DeploymentsController(googleAuthConfig, wsClient, deploymentsCtx)
-  val authController        = new AuthController(googleAuthConfig, wsClient)
-  val assets                = new Assets(httpErrorHandler)
+  val authAction = new AuthAction[AnyContent](googleAuthConfig,
+                                              routes.AuthController.login(),
+                                              controllerComponents.parsers.default)(executionContext)
+
+  val apiKeyAuth = new ApiKeyAuth(jestClient, defaultActionBuilder)
+
+  val mainController = new MainController(controllerComponents, authAction, googleAuthConfig, wsClient)
+  val apiKeysController =
+    new ApiKeysController(controllerComponents, authAction, googleAuthConfig, wsClient, jestClient)
+  val deploymentsController =
+    new DeploymentsController(controllerComponents, authAction, apiKeyAuth, googleAuthConfig, wsClient, deploymentsCtx)
+  val authController = new AuthController(controllerComponents, googleAuthConfig, wsClient)
 
   lazy val router: Router = new Routes(
     httpErrorHandler,

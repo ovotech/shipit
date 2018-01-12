@@ -2,7 +2,7 @@ package controllers
 
 import java.util.UUID
 
-import com.gu.googleauth.GoogleAuthConfig
+import com.gu.googleauth.{AuthAction, GoogleAuthConfig, UserIdentity}
 import es.ES
 import io.searchbox.client.JestClient
 import play.api.libs.ws.WSClient
@@ -10,19 +10,22 @@ import play.api.mvc._
 import play.api.data._
 import play.api.data.Forms._
 
-class ApiKeysController(val authConfig: GoogleAuthConfig, val wsClient: WSClient, jestClient: JestClient)
-    extends AuthActions
-    with Controller {
+class ApiKeysController(controllerComponents: ControllerComponents,
+                        authAction: AuthAction[AnyContent],
+                        val authConfig: GoogleAuthConfig,
+                        val wsClient: WSClient,
+                        jestClient: JestClient)
+    extends AbstractController(controllerComponents) {
   import ApiKeysController._
 
-  def list(page: Int) = AuthAction { implicit request =>
-    implicit val user = request.user
-    val items         = ES.ApiKeys.list(request.user.email, page).run(jestClient)
+  def list(page: Int) = authAction { implicit request =>
+    implicit val user: UserIdentity = request.user
+    val items                       = ES.ApiKeys.list(request.user.email, page).run(jestClient)
     Ok(views.html.apikeys.list(items))
   }
 
-  def create = AuthAction { implicit request =>
-    implicit val user = request.user
+  def create = authAction { implicit request =>
+    implicit val user: UserIdentity = request.user
     CreateKeyForm.bindFromRequest.fold(
       _ => Redirect(routes.ApiKeysController.list()).flashing("error" -> "Invalid request"),
       data => {
@@ -38,20 +41,20 @@ class ApiKeysController(val authConfig: GoogleAuthConfig, val wsClient: WSClient
     )
   }
 
-  def disable(keyId: String) = AuthAction { request =>
-    implicit val user = request.user
+  def disable(keyId: String) = authAction { request =>
+    implicit val user: UserIdentity = request.user
     ES.ApiKeys.disable(keyId).run(jestClient)
     Redirect(routes.ApiKeysController.list()).flashing("info" -> "Disabled API key")
   }
 
-  def enable(keyId: String) = AuthAction { request =>
-    implicit val user = request.user
+  def enable(keyId: String) = authAction { request =>
+    implicit val user: UserIdentity = request.user
     ES.ApiKeys.enable(keyId).run(jestClient)
     Redirect(routes.ApiKeysController.list()).flashing("info" -> "Enabled API key")
   }
 
-  def delete(keyId: String) = AuthAction { request =>
-    implicit val user = request.user
+  def delete(keyId: String) = authAction { request =>
+    implicit val user: UserIdentity = request.user
     ES.ApiKeys.delete(keyId).run(jestClient)
     Redirect(routes.ApiKeysController.list()).flashing("info" -> "Deleted API key")
   }
