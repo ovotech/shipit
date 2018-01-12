@@ -29,7 +29,7 @@ jobs:
              - /home/circleci/.coursier
              - project/target/resolution-cache
              - target/resolution-cache
-       - run: sbt test
+       - run: sbt test docker:publishLocal
        - deploy:
            name: Deploy if master branch
            command: |
