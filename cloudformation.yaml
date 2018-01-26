@@ -97,7 +97,6 @@ Resources:
           Value: ovo-comms-logs
         - Key: access_logs.s3.prefix
           Value: !Sub "shipit/${Environment}/loadbalancer"
-      Name: !Sub "shipit-${Environment}"
       Scheme: internet-facing
       SecurityGroups:
         - Ref: LoadBalancerSecurityGroup
@@ -113,7 +112,6 @@ Resources:
     Properties:
       HealthCheckPath: '/healthcheck'
       HealthCheckProtocol: HTTP
-      Name: !Sub "shipit-${Environment}"
       Port: 80
       Protocol: HTTP
       TargetGroupAttributes:
