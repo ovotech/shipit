@@ -1,27 +1,20 @@
 <configuration>
-    <shutdownHook class="ch.qos.logback.core.hook.DelayingShutdownHook"/>
-    <appender name="LogzioLogbackAppender" class="io.logz.logback.LogzioLogbackAppender">
-        <token>@@{prd.logzio_token}</token>
-        <logzioType>java</logzioType>
-        <addHostname>true</addHostname>
-        <additionalFields>service=shipit;environment=PRD</additionalFields>
-    </appender>
-    <appender name="GELF UDP APPENDER" class="me.moocar.logbackgelf.GelfUDPAppender">
-        <remoteHost>@@{prd.graylog_host}</remoteHost>
-        <port>12201</port>
-        <encoder class="me.moocar.logbackgelf.GZIPEncoder">
-            <layout class="me.moocar.logbackgelf.GelfLayout">
-                <staticAdditionalField>service:shipit</staticAdditionalField>
-                <host>${HOSTNAME}</host>
-                <useThreadName>true</useThreadName>
-                <includeFullMDC>true</includeFullMDC>
-            </layout>
-        </encoder>
-    </appender>
-    <logger name="akka" level="INFO"/>
-    <logger name="org.apache" level="WARN"/>
-    <root level="INFO">
-        <appender-ref ref="LogzioLogbackAppender"/>
-        <appender-ref ref="GELF UDP APPENDER"/>
-    </root>
+  <shutdownHook class="ch.qos.logback.core.hook.DelayingShutdownHook"/>
+  <appender name="Graylog" class="me.moocar.logbackgelf.GelfUDPAppender">
+    <remoteHost>${GRAYLOG_HOST}</remoteHost>
+    <port>12201</port>
+    <encoder class="me.moocar.logbackgelf.GZIPEncoder">
+      <layout class="me.moocar.logbackgelf.GelfLayout">
+        <staticAdditionalField>service:shipit</staticAdditionalField>
+        <host>${HOSTNAME}</host>
+        <useThreadName>true</useThreadName>
+        <includeFullMDC>true</includeFullMDC>
+      </layout>
+    </encoder>
+  </appender>
+  <logger name="akka" level="INFO"/>
+  <logger name="org.apache" level="WARN"/>
+  <root level="INFO">
+    <appender-ref ref="Graylog"/>
+  </root>
 </configuration>

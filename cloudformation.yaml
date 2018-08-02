@@ -25,7 +25,7 @@ Resources:
     Properties:
       AssumeRolePolicyDocument:
         Statement:
-          - 
+          -
             Effect: Allow
             Principal:
               Service:
@@ -34,7 +34,7 @@ Resources:
               - sts:AssumeRole
       Path: /
       Policies:
-        - 
+        -
           PolicyName: read-write-elasticsearch
           PolicyDocument:
             Statement:
@@ -65,7 +65,7 @@ Resources:
 
   LoadBalancerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
-    Properties: 
+    Properties:
       GroupDescription: 'Open port 443 to the world'
 
       SecurityGroupIngress:
@@ -150,7 +150,7 @@ Resources:
 
   ElasticsearchDomain:
     Type: AWS::Elasticsearch::Domain
-    Properties: 
+    Properties:
       EBSOptions:
         EBSEnabled: true
         VolumeSize: 10
