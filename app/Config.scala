@@ -1,22 +1,24 @@
-import cats.{Monoid, Semigroup}
+import cats.Semigroup
 import ciris._
 import ciris.aws.ssm._
 import com.amazonaws.util.EC2MetadataUtils
 import cats.syntax.either._
-import cats.instances.either._
 import cats.instances.parallel._
 import cats.syntax.parallel._
 
 import scala.util.Try
 
 case class ESConfig(
+    region: String = "eu-west-1",
     endpointUrl: String
 )
 
 object ESConfig {
 
   def load(): Either[ConfigErrors, ESConfig] = {
-    loadConfig(param[String]("shipit.es.endpointUrl"))(ESConfig.apply)
+    loadConfig(
+      param[String]("shipit.es.endpointUrl")
+    )(endpointUrl => ESConfig.apply(endpointUrl = endpointUrl))
   }
 
 }
@@ -35,7 +37,9 @@ object SlackConfig {
 
 case class JiraConfig(
     username: String,
-    password: String
+    password: String,
+    browseTicketsUrl: String = "https://ovotech.atlassian.net/browse/",
+    issueApiUrl: String = "https://ovotech.atlassian.net/rest/api/2/issue"
 )
 
 object JiraConfig {
@@ -44,7 +48,7 @@ object JiraConfig {
     loadConfig(
       param[String]("shipit.jira.username"),
       param[String]("shipit.jira.password")
-    )(JiraConfig.apply)
+    )((username, password) => JiraConfig(username, password))
   }
 
 }
@@ -97,11 +101,9 @@ case class Config(
 
 object Config {
 
-  def unsafeLoad(): Config = {
-    load() match {
-      case Left(errors) => throw errors.toException // KABOOM!
-      case Right(c)     => c
-    }
+  def unsafeLoad(): Config = load() match {
+    case Left(errors) => throw errors.toException // KABOOM!
+    case Right(c)     => c
   }
 
   private val runningInAWS: Boolean =

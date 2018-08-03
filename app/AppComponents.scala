@@ -31,21 +31,20 @@ class AppComponents(context: Context)
 
   implicit val actorSys: ActorSystem = actorSystem
 
-  def mandatoryConfig(key: String): String =
-    configuration.get[Option[String]](key).getOrElse(sys.error(s"Missing config key: $key"))
+  private val config = Config.unsafeLoad()
 
   val googleAuthConfig = GoogleAuthConfig(
-    clientId = mandatoryConfig("google.clientId"),
-    clientSecret = mandatoryConfig("google.clientSecret"),
-    redirectUrl = mandatoryConfig("google.redirectUrl"),
+    clientId = config.google.clientId,
+    clientSecret = config.google.clientSecret,
+    redirectUrl = config.google.redirectUrl,
     domain = "ovoenergy.com",
     antiForgeryChecker = AntiForgeryChecker.borrowSettingsFromPlay(httpConfiguration)
   )
 
   val jestClient: JestClient = {
-    val region  = mandatoryConfig("aws.region")
+    val region  = config.es.region
     val service = "es"
-    val url     = mandatoryConfig("aws.es.endpointUrl")
+    val url     = config.es.endpointUrl
     val awsCredentialsProvider = new AWSCredentialsProviderChain(
       new EC2ContainerCredentialsProviderWrapper(),
       new ProfileCredentialsProvider()
@@ -65,25 +64,18 @@ class AppComponents(context: Context)
     factory.getObject
   }
 
-  val slackWebhookUrl = mandatoryConfig("slack.webhookUrl")
-  val slackCtx        = Slack.Context(wsClient, slackWebhookUrl)
+  val slackCtx = Slack.Context(wsClient, config.slack.webhookUrl)
 
   val jiraCtx = JIRA.Context(
     wsClient,
-    mandatoryConfig("jira.browseTicketsUrl"),
-    mandatoryConfig("jira.issueApiUrl"),
-    mandatoryConfig("jira.username"),
-    mandatoryConfig("jira.password")
+    config.jira.browseTicketsUrl,
+    config.jira.issueApiUrl,
+    config.jira.username,
+    config.jira.password
   )
 
-  val isAdmin = {
-    val adminEmailAddresses = configuration
-      .get[Option[Seq[String]]]("admin.emailAddresses")
-      .fold[Set[String]](Set.empty)(_.toSet)
-
-    (user: UserIdentity) =>
-      adminEmailAddresses.contains(user.email)
-  }
+  val isAdmin: UserIdentity => Boolean =
+    (user: UserIdentity) => config.admin.adminEmailAddresses.contains(user.email)
 
   val deploymentsCtx = Deployments.Context(jestClient, slackCtx, jiraCtx, isAdmin)
 
