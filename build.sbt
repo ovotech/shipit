@@ -34,6 +34,7 @@ enablePlugins(PlayScala, DockerPlugin)
 scalafmtOnCompile in ThisBuild := true
 
 // Docker packaging stuff
+dockerBaseImage := "openjdk:8-alpine"
 javaOptions in Universal ++= Seq(
     // -J params will be added as jvm parameters
     "-J-Xmx256m",
