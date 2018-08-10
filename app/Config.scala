@@ -1,10 +1,10 @@
-import cats.Semigroup
-import ciris._
-import ciris.aws.ssm._
 import com.amazonaws.util.EC2MetadataUtils
 import cats.syntax.either._
 import cats.instances.parallel._
 import cats.syntax.parallel._
+import ciris._
+import ciris.cats._
+import ciris.aws.ssm._
 
 import scala.util.Try
 
@@ -117,11 +117,6 @@ object Config {
       GoogleConfig.load(runningInAWS),
       AdminConfig.load()
     ).parMapN(Config.apply)
-  }
-
-  private implicit val configErrorsSemigroup: Semigroup[ConfigErrors] = new Semigroup[ConfigErrors] {
-    override def combine(x: ConfigErrors, y: ConfigErrors): ConfigErrors =
-      ConfigErrors(x.toVector.head, x.toVector.tail ++ y.toVector: _*)
   }
 
 }
