@@ -120,6 +120,8 @@ Resources:
     Properties:
       HealthCheckPath: '/healthcheck'
       HealthCheckProtocol: HTTP
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 5
       Port: 9000
       Protocol: HTTP
       TargetType: ip
