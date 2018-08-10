@@ -10,10 +10,7 @@ class MainController(controllerComponents: ControllerComponents,
                      val wsClient: WSClient)
     extends AbstractController(controllerComponents) {
 
-  val healthcheck = Action { request =>
-    println(s"I'm healthy! ${request.remoteAddress}")
-    Ok("OK")
-  }
+  val healthcheck = Action { Ok("OK") }
 
   val index = authAction { request =>
     implicit val user: UserIdentity = request.user
