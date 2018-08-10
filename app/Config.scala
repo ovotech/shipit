@@ -1,3 +1,5 @@
+import java.net.{HttpURLConnection, URL}
+
 import com.amazonaws.util.EC2MetadataUtils
 import cats.syntax.either._
 import cats.instances.parallel._
@@ -7,6 +9,7 @@ import ciris.cats._
 import ciris.aws.ssm._
 
 import scala.util.Try
+import scala.util.control.NonFatal
 
 case class ESConfig(
     region: String = "eu-west-1",
@@ -130,9 +133,22 @@ object Config {
     case Right(c)     => c
   }
 
-  private val runningInAWS: Boolean =
-    // TODO use task metadata, not EC2 metadata
-    Try(EC2MetadataUtils.getInstanceId() != null).getOrElse(false)
+  private val runningInAWS: Boolean = {
+    // TODO there doesn't seem to be a nice equivalent to EC2MetadataUtils for retrieving task metadata
+    val metadataUrl = new URL("http://169.254.170.2/v2/metadata")
+    try {
+      val connection = metadataUrl.openConnection().asInstanceOf[HttpURLConnection]
+      try {
+        connection.setRequestMethod("GET")
+        connection.connect()
+        connection.getResponseCode == 200
+      } finally {
+        connection.disconnect()
+      }
+    } catch {
+      case NonFatal(e) => false
+    }
+  }
 
   def load(): Either[ConfigErrors, Config] = {
     println(s"Am I running in AWS? $runningInAWS")
