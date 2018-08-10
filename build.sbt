@@ -27,5 +27,12 @@ libraryDependencies ++= Seq(
 )
 
 enablePlugins(PlayScala, DockerPlugin)
-
 scalafmtOnCompile in ThisBuild := true
+
+// Docker packaging stuff
+javaOptions in Universal ++= Seq(
+    // -J params will be added as jvm parameters
+    "-J-Xmx256m",
+    "-J-Xms256m"
+)
+dockerUpdateLatest := false

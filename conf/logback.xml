@@ -11,6 +11,8 @@
     <logger name="akka" level="INFO" />
     <logger name="org.apache" level="WARN" />
 
+    <!-- Note: when running in production, a Graylog appender is also added programatically at startup -->
+
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
     </root>

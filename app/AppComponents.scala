@@ -22,7 +22,7 @@ import router.Routes
 import slack.Slack
 import vc.inreach.aws.request.{AWSSigner, AWSSigningRequestInterceptor}
 
-class AppComponents(context: Context)
+class AppComponents(context: Context, config: Config)
     extends BuiltInComponentsFromContext(context)
     with AhcWSComponents
     with CSRFComponents
@@ -31,11 +31,9 @@ class AppComponents(context: Context)
 
   implicit val actorSys: ActorSystem = actorSystem
 
-  private val config = Config.unsafeLoad()
-
   val googleAuthConfig = GoogleAuthConfig(
     clientId = config.google.clientId,
-    clientSecret = config.google.clientSecret,
+    clientSecret = config.google.clientSecret.value,
     redirectUrl = config.google.redirectUrl,
     domain = "ovoenergy.com",
     antiForgeryChecker = AntiForgeryChecker.borrowSettingsFromPlay(httpConfiguration)
@@ -64,14 +62,14 @@ class AppComponents(context: Context)
     factory.getObject
   }
 
-  val slackCtx = Slack.Context(wsClient, config.slack.webhookUrl)
+  val slackCtx = Slack.Context(wsClient, config.slack.webhookUrl.value)
 
   val jiraCtx = JIRA.Context(
     wsClient,
     config.jira.browseTicketsUrl,
     config.jira.issueApiUrl,
     config.jira.username,
-    config.jira.password
+    config.jira.password.value
   )
 
   val isAdmin: UserIdentity => Boolean =
