@@ -26,8 +26,6 @@ libraryDependencies ++= Seq(
   "org.scalacheck"             %% "scalacheck"                     % "1.13.5" % Test
 )
 
-val testReportsDir = sys.env.getOrElse("CI_REPORTS", "target/reports")
-testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oF", "-u", testReportsDir)
 enablePlugins(PlayScala, DockerPlugin)
 
 scalafmtOnCompile in ThisBuild := true
