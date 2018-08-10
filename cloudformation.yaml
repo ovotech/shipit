@@ -141,18 +141,6 @@ Resources:
       Certificates:
         - CertificateArn: !Ref LoadBalancerCertificateArn
 
-  ECSALBListenerRule:
-    Type: AWS::ElasticLoadBalancingV2::ListenerRule
-    Properties:
-      Actions:
-      - Type: forward
-        TargetGroupArn: !Ref ECSTargetGroup
-      Conditions:
-      - Field: path-pattern
-        Values: [/]
-      ListenerArn: !Ref ALBListener
-      Priority: 1
-
   ElasticsearchDomain:
     Type: AWS::Elasticsearch::Domain
     Properties:
