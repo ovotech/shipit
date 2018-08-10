@@ -2,6 +2,10 @@ organization := "com.ovoenergy"
 scalaVersion := "2.11.11" // TODO Scala 2.12
 scalacOptions += "-Ypartial-unification"
 
+// The version number is fixed, for the sake of simpler deployment scripts.
+// The uploaded docker image will be tagged with the git sha1.
+version := "1.0"
+
 resolvers += Resolver.bintrayRepo("ovotech", "maven")
 // TODO bump various libs
 val circeVersion = "0.9.0"

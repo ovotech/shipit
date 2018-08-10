@@ -24,24 +24,6 @@ Resources:
     Properties:
       ClusterName: shipit
 
-  ECSServiceRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: shipit-ECSServiceRole
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          -
-            Effect: Allow
-            Principal:
-              Service:
-                - ecs.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Path: "/"
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceRole
-
   ECSTaskRole:
     Type: AWS::IAM::Role
     Properties:
@@ -140,6 +122,7 @@ Resources:
       HealthCheckProtocol: HTTP
       Port: 9000
       Protocol: HTTP
+      TargetType: ip
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
           Value: 30
