@@ -11,9 +11,11 @@ class AppLoader extends ApplicationLoader {
 
   override def load(context: Context): Application = {
     val config = Config.unsafeLoad()
+    Logger.info(s"Loaded configuration: $config")
 
     new LogbackLoggerConfigurator().configure(context.environment)
-    enableGraylogLogging(config.logging)
+    val loggingToGraylog = enableGraylogLogging(config.logging)
+    Logger.info(s"Logging to Graylog? $loggingToGraylog")
 
     val components = new AppComponents(context, config)
 
@@ -22,11 +24,12 @@ class AppLoader extends ApplicationLoader {
     components.application
   }
 
-  private def enableGraylogLogging(config: LoggingConfig): Unit = config match {
+  private def enableGraylogLogging(config: LoggingConfig): Boolean = config match {
     case GraylogEnabledLoggingConfig(graylogHostname, myHostname) =>
       addGraylogAppender(graylogHostname, myHostname)
+      true
     case GraylogDisabledLoggingConfig =>
-    // nothing to do
+      false
   }
 
   private def addGraylogAppender(graylogHostname: String, myHostname: String): Unit = {
@@ -38,6 +41,7 @@ class AppLoader extends ApplicationLoader {
     layout.addStaticAdditionalField("service:shipit")
     layout.setIncludeFullMDC(true)
     layout.setUseThreadName(true)
+    layout.start()
 
     val encoder = new GZIPEncoder[ILoggingEvent]
     encoder.setContext(loggerContext)

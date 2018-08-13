@@ -140,6 +140,8 @@ object Config {
       val connection = metadataUrl.openConnection().asInstanceOf[HttpURLConnection]
       try {
         connection.setRequestMethod("GET")
+        connection.setConnectTimeout(2000)
+        connection.setReadTimeout(2000)
         connection.connect()
         connection.getResponseCode == 200
       } finally {
