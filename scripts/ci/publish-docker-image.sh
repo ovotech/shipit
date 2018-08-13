@@ -5,8 +5,8 @@
 
 set -e
 
-git_sha1=${CIRCLE_SHA1:-$(git rev-parse HEAD)}
-aws_account_id=$(aws sts get-caller-identity --query Account --output text)
+git_sha1="${CIRCLE_SHA1:-$(git rev-parse HEAD)}"
+aws_account_id="$(aws sts get-caller-identity --query Account --output text)"
 
 eval "$(aws ecr get-login --no-include-email --region eu-west-1)"
 
