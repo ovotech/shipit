@@ -37,7 +37,7 @@ scalafmtOnCompile in ThisBuild := true
 dockerBaseImage := "openjdk:8"
 javaOptions in Universal ++= Seq(
     // -J params will be added as jvm parameters
-    "-J-Xmx256m",
-    "-J-Xms256m"
+    "-J-Xmx512m",
+    "-J-Xms512m"
 )
 dockerUpdateLatest := false

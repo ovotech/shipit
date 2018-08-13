@@ -57,8 +57,8 @@ register_task_definition() {
     --family "$service_name" \
     --container-definitions "$container_definitions" \
     --network-mode awsvpc \
-    --memory 512 \
-    --cpu 256 \
+    --memory 1024 \
+    --cpu 512 \
     --requires-compatibilities FARGATE \
     --task-role-arn "$taskRoleArn" \
     --execution-role-arn "$executionRoleArn")
