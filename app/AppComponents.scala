@@ -13,7 +13,7 @@ import logic.Deployments
 import org.apache.http.impl.client.HttpClientBuilder
 import play.api.ApplicationLoader.Context
 import play.api.routing.Router
-import play.api.BuiltInComponentsFromContext
+import play.api.{BuiltInComponentsFromContext, Configuration}
 import play.api.libs.ws.ahc.AhcWSComponents
 import play.api.mvc.{AnyContent, EssentialFilter}
 import play.filters.HttpFiltersComponents
@@ -30,6 +30,9 @@ class AppComponents(context: Context, config: Config)
     with AssetsComponents {
 
   implicit val actorSys: ActorSystem = actorSystem
+
+  override def configuration: Configuration =
+    context.initialConfiguration ++ Configuration("play.http.secret.key" -> config.play.secretKey.value)
 
   val googleAuthConfig = GoogleAuthConfig(
     clientId = config.google.clientId,

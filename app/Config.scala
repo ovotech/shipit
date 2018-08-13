@@ -117,13 +117,23 @@ object LoggingConfig {
 
 }
 
+case class PlayConfig(secretKey: Secret[String])
+
+object PlayConfig {
+
+  def load(): Either[ConfigErrors, PlayConfig] =
+    loadConfig(param[Secret[String]]("shipit.play.secretKey"))(PlayConfig.apply)
+
+}
+
 case class Config(
     es: ESConfig,
     slack: SlackConfig,
     jira: JiraConfig,
     google: GoogleConfig,
     admin: AdminConfig,
-    logging: LoggingConfig
+    logging: LoggingConfig,
+    play: PlayConfig
 )
 
 object Config {
@@ -160,7 +170,8 @@ object Config {
       JiraConfig.load(),
       GoogleConfig.load(runningInAWS),
       AdminConfig.load(),
-      LoggingConfig.load(runningInAWS)
+      LoggingConfig.load(runningInAWS),
+      PlayConfig.load()
     ).parMapN(Config.apply)
   }
 
