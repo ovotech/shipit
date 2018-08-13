@@ -69,7 +69,7 @@ object GoogleConfig {
       loadConfig(
         param[String]("shipit.google.clientId"),
         param[Secret[String]]("shipit.google.clientSecret")
-      )(GoogleConfig.apply(_, _, redirectUrl = "https://shipit-test.ovotech.org.uk/oauth2callback"))
+      )(GoogleConfig.apply(_, _, redirectUrl = "https://shipit.ovotech.org.uk/oauth2callback"))
     } else {
       // These credentials will only work when running the app on localhost:9000, i.e. on a developer machine
       GoogleConfig(
