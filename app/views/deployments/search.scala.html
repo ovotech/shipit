@@ -43,22 +43,25 @@
 
   <table class="table table-striped">
     <thead>
-      <tr><th>Timestamp</th><th>Team</th><th>Service</th><th>Build ID</th><th>Links</th><th>Notes</th>@if(showAdminColumn){<th>Danger zone</th>}</tr>
+      <tr><th>Timestamp</th><th>Team</th><th>Service</th><th>Build ID</th><th>Links and notes</th>@if(showAdminColumn){<th>Danger zone</th>}</tr>
     </thead>
     <tbody>
       @for(item <- page.items) {
         <tr>
-          <td><time class="timeago" datetime="@item.value.timestamp.toString">@formatDate(item.value.timestamp)</time></td>
+          <td>@formatDate(item.value.timestamp) (<time class="timeago" datetime="@item.value.timestamp.toString">@formatDate(item.value.timestamp)</time>)</td>
           <td>@item.value.team</td>
           <td>@item.value.service</td>
           <td>@item.value.buildId</td>
           <td>
+            <ul>
             @for((link, i) <- item.value.links.zipWithIndex) {
-              <span><a href="@link.url" target="_blank">@link.title</a></span>
-              @if(i < item.value.links.size - 1) { , }
+              <li><a href="@link.url" target="_blank">@link.title</a></li>
+            }
+            </ul>
+            @for(note <- item.value.note) {
+              <pre>@item.value.note</pre>
             }
           </td>
-          <td><pre>@item.value.note</pre></td>
           @if(showAdminColumn) {
             <td>
               <form id="delete_@item.id" method="post" action="@routes.DeploymentsController.delete(item.id)">@CSRF.formField</form>
