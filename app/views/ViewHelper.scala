@@ -1,9 +1,8 @@
 package views
 
-import java.time.{Instant, OffsetDateTime, ZoneId, ZoneOffset}
+import java.time.{OffsetDateTime, ZoneOffset}
 import java.time.format.DateTimeFormatter
 
-import models.DeploymentResult.{Cancelled, Failed, Succeeded}
 import models.{ApiKey, Deployment}
 
 object ViewHelper {
@@ -26,9 +25,4 @@ object ViewHelper {
     else
       <span class="label label-default">Disabled</span>
 
-  def resultBadge(deployment: Deployment) = deployment.result match {
-    case Succeeded => <span class="label label-primary">Succeeded</span>
-    case Failed    => <span class="label label-danger">Failed</span>
-    case Cancelled => <span class="label label-warning">Cancelled</span>
-  }
 }

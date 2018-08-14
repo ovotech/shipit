@@ -7,7 +7,6 @@ import cats.data.Kleisli
 import cats.instances.future._
 import cats.syntax.option._
 import models.Deployment
-import models.DeploymentResult.{Cancelled, Failed, Succeeded}
 import play.Logger
 import play.api.libs.json.Json.obj
 import play.api.libs.json._
@@ -61,14 +60,7 @@ object JIRA {
   }
 
   def buildPayload(deployment: Deployment, jiraComponent: String, currentTime: OffsetDateTime): JsValue = {
-    val summary = deployment.result match {
-      case Succeeded =>
-        s"Service '${deployment.team}/${deployment.service}' was deployed successfully."
-      case Failed =>
-        s"Deployment of service '${deployment.team}/${deployment.service}' failed."
-      case Cancelled =>
-        s"Deployment of service '${deployment.team}/${deployment.service}' was cancelled."
-    }
+    val summary = s"Service '${deployment.team}/${deployment.service}' was deployed successfully."
     val linksText = {
       if (deployment.links.isEmpty) ""
       else {

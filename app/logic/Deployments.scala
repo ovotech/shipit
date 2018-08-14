@@ -12,10 +12,8 @@ import es.ES
 import io.searchbox.client.JestClient
 import jira.JIRA
 import jira.JIRA.CreateIssueKey
-import models.DeploymentResult.Succeeded
 import models._
 import play.api.Logger
-import play.api.libs.json.JsObject
 import play.api.libs.ws.WSResponse
 import slack.Slack
 
@@ -36,10 +34,9 @@ object Deployments {
                        timestamp: OffsetDateTime,
                        links: Seq[Link],
                        note: Option[String],
-                       result: DeploymentResult,
                        notifySlackChannel: Option[String]): Kleisli[Future, Context, Deployment] = {
 
-    val deployment = Deployment(team, service, jiraComponent, buildId, timestamp, links, note, result)
+    val deployment = Deployment(team, service, jiraComponent, buildId, timestamp, links, note)
 
     for {
       jiraResp           <- JIRA.createAndTransitionIssueIfPossible(deployment).local[Context](_.jiraCtx)

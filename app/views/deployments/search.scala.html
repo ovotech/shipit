@@ -1,7 +1,6 @@
-@(page: es.ES.Page[Identified[Deployment]], team: Option[String], service: Option[String], buildId: Option[String], result: Option[DeploymentResult], showAdminColumn: Boolean)(implicit user: com.gu.googleauth.UserIdentity, request: RequestHeader)
+@(page: es.ES.Page[Identified[Deployment]], team: Option[String], service: Option[String], buildId: Option[String], showAdminColumn: Boolean)(implicit user: com.gu.googleauth.UserIdentity, request: RequestHeader)
 
 @import views.ViewHelper._
-@import models.DeploymentResult._
 @import helper._
 
 @main {
@@ -13,7 +12,7 @@
   <div class="panel panel-default">
     <div class="panel-heading">Filters <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#filters" aria-expanded="false" aria-controls="filters">Toggle</button></div>
     <div class="panel-body collapse" id="filters">
-      <form method="get" action="@routes.DeploymentsController.search(None, None, None, None)" class="form form-horizontal">
+      <form method="get" action="@routes.DeploymentsController.search(None, None, None)" class="form form-horizontal">
         <div class="form-group">
           <label class="col-sm-2 control-label" for="team">Team</label>
           <div class="col-sm-4">
@@ -32,17 +31,6 @@
             <input type="text" class="form-control" id="buildId" name="buildId" value="@buildId">
           </div>
         </div>
-        <div class="form-group">
-          <label class="col-sm-2 control-label" for="result">Result</label>
-          <div class="col-sm-4">
-            <select class="form-control" id="result" name="result">
-              <option value="">(any)</option>
-              <option value="@DeploymentResult.toLowerCaseString(Succeeded)" @if(result.contains(DeploymentResult.Succeeded)) { selected="" }>Succeeded</option>
-              <option value="@DeploymentResult.toLowerCaseString(Failed)"    @if(result.contains(DeploymentResult.Failed)) { selected="" }>Failed</option>
-              <option value="@DeploymentResult.toLowerCaseString(Cancelled)" @if(result.contains(DeploymentResult.Cancelled)) { selected="" }>Cancelled</option>
-            </select>
-          </div>
-        </div>
         <!-- TODO date picker -->
         <div class="form-group">
           <div class="col-sm-offset-2 col-sm-4">
@@ -55,23 +43,25 @@
 
   <table class="table table-striped">
     <thead>
-      <tr><th>Timestamp</th><th>Team</th><th>Service</th><th>Build ID</th><th>Result</th><th>Links</th><th>Notes</th>@if(showAdminColumn){<th>Danger zone</th>}</tr>
+      <tr><th>Timestamp</th><th>Team</th><th>Service</th><th>Build ID</th><th>Links and notes</th>@if(showAdminColumn){<th>Danger zone</th>}</tr>
     </thead>
     <tbody>
       @for(item <- page.items) {
         <tr>
-          <td><time class="timeago" datetime="@item.value.timestamp.toString">@formatDate(item.value.timestamp)</time></td>
+          <td>@formatDate(item.value.timestamp) (<time class="timeago" datetime="@item.value.timestamp.toString">@formatDate(item.value.timestamp)</time>)</td>
           <td>@item.value.team</td>
           <td>@item.value.service</td>
           <td>@item.value.buildId</td>
-          <td>@resultBadge(item.value)</td>
           <td>
+            <ul>
             @for((link, i) <- item.value.links.zipWithIndex) {
-              <span><a href="@link.url" target="_blank">@link.title</a></span>
-              @if(i < item.value.links.size - 1) { , }
+              <li><a href="@link.url" target="_blank">@link.title</a></li>
+            }
+            </ul>
+            @for(note <- item.value.note) {
+              <pre>@item.value.note</pre>
             }
           </td>
-          <td><pre>@item.value.note</pre></td>
           @if(showAdminColumn) {
             <td>
               <form id="delete_@item.id" method="post" action="@routes.DeploymentsController.delete(item.id)">@CSRF.formField</form>
@@ -85,12 +75,12 @@
 
   <ul class="pager">
     @if(page.pageNumber > 1) {
-      <li><a href="@routes.DeploymentsController.search(team, service, buildId, result.map(DeploymentResult.toLowerCaseString))">Latest</a></li>
-      <li><a href="@routes.DeploymentsController.search(team, service, buildId, result.map(DeploymentResult.toLowerCaseString), page.pageNumber - 1)">&larr; Newer</a></li>
+      <li><a href="@routes.DeploymentsController.search(team, service, buildId)">Latest</a></li>
+      <li><a href="@routes.DeploymentsController.search(team, service, buildId, page.pageNumber - 1)">&larr; Newer</a></li>
     }
     @if(page.pageNumber < page.lastPage) {
-      <li><a href="@routes.DeploymentsController.search(team, service, buildId, result.map(DeploymentResult.toLowerCaseString), page.pageNumber + 1)">Older &rarr;</a></li>
-      <li><a href="@routes.DeploymentsController.search(team, service, buildId, result.map(DeploymentResult.toLowerCaseString), page.lastPage)">Oldest</a></li>
+      <li><a href="@routes.DeploymentsController.search(team, service, buildId, page.pageNumber + 1)">Older &rarr;</a></li>
+      <li><a href="@routes.DeploymentsController.search(team, service, buildId, page.lastPage)">Oldest</a></li>
     }
   </ul>
 
