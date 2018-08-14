@@ -13,7 +13,7 @@ import logic.Deployments
 import org.apache.http.impl.client.HttpClientBuilder
 import play.api.ApplicationLoader.Context
 import play.api.routing.Router
-import play.api.{BuiltInComponentsFromContext, Logger}
+import play.api.{BuiltInComponentsFromContext, Configuration}
 import play.api.libs.ws.ahc.AhcWSComponents
 import play.api.mvc.{AnyContent, EssentialFilter}
 import play.filters.HttpFiltersComponents
@@ -22,7 +22,7 @@ import router.Routes
 import slack.Slack
 import vc.inreach.aws.request.{AWSSigner, AWSSigningRequestInterceptor}
 
-class AppComponents(context: Context)
+class AppComponents(context: Context, config: Config)
     extends BuiltInComponentsFromContext(context)
     with AhcWSComponents
     with CSRFComponents
@@ -31,21 +31,21 @@ class AppComponents(context: Context)
 
   implicit val actorSys: ActorSystem = actorSystem
 
-  def mandatoryConfig(key: String): String =
-    configuration.get[Option[String]](key).getOrElse(sys.error(s"Missing config key: $key"))
+  override def configuration: Configuration =
+    context.initialConfiguration ++ Configuration("play.http.secret.key" -> config.play.secretKey.value)
 
   val googleAuthConfig = GoogleAuthConfig(
-    clientId = mandatoryConfig("google.clientId"),
-    clientSecret = mandatoryConfig("google.clientSecret"),
-    redirectUrl = mandatoryConfig("google.redirectUrl"),
+    clientId = config.google.clientId,
+    clientSecret = config.google.clientSecret.value,
+    redirectUrl = config.google.redirectUrl,
     domain = "ovoenergy.com",
     antiForgeryChecker = AntiForgeryChecker.borrowSettingsFromPlay(httpConfiguration)
   )
 
   val jestClient: JestClient = {
-    val region  = mandatoryConfig("aws.region")
+    val region  = config.es.region
     val service = "es"
-    val url     = mandatoryConfig("aws.es.endpointUrl")
+    val url     = config.es.endpointUrl
     val awsCredentialsProvider = new AWSCredentialsProviderChain(
       new EC2ContainerCredentialsProviderWrapper(),
       new ProfileCredentialsProvider()
@@ -65,25 +65,18 @@ class AppComponents(context: Context)
     factory.getObject
   }
 
-  val slackWebhookUrl = mandatoryConfig("slack.webhookUrl")
-  val slackCtx        = Slack.Context(wsClient, slackWebhookUrl)
+  val slackCtx = Slack.Context(wsClient, config.slack.webhookUrl.value)
 
   val jiraCtx = JIRA.Context(
     wsClient,
-    mandatoryConfig("jira.browseTicketsUrl"),
-    mandatoryConfig("jira.issueApiUrl"),
-    mandatoryConfig("jira.username"),
-    mandatoryConfig("jira.password")
+    config.jira.browseTicketsUrl,
+    config.jira.issueApiUrl,
+    config.jira.username,
+    config.jira.password.value
   )
 
-  val isAdmin = {
-    val adminEmailAddresses = configuration
-      .get[Option[Seq[String]]]("admin.emailAddresses")
-      .fold[Set[String]](Set.empty)(_.toSet)
-
-    (user: UserIdentity) =>
-      adminEmailAddresses.contains(user.email)
-  }
+  val isAdmin: UserIdentity => Boolean =
+    (user: UserIdentity) => config.admin.adminEmailAddresses.contains(user.email)
 
   val deploymentsCtx = Deployments.Context(jestClient, slackCtx, jiraCtx, isAdmin)
 

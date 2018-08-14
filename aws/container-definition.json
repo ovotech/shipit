@@ -3,17 +3,13 @@
     "name": "shipit",
     "image": "@@AWS_ACCOUNT_ID.dkr.ecr.eu-west-1.amazonaws.com/shipit:@@VERSION",
     "essential": true,
-    "memory": 512,
-    "environment": [
-      {
-        "name": "ENV",
-        "value": "@@ENV"
-      }
-    ],
+    "memory": 1024,
+    "environment": [],
     "portMappings": [
       {
         "containerPort": 9000,
-        "hostPort": 0
+        "hostPort": 9000,
+        "protocol": "tcp"
       }
     ],
     "ulimits": [
@@ -22,6 +18,14 @@
         "softLimit": 16384,
         "hardLimit": 16384
       }
-    ]
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "/ecs/shipit",
+        "awslogs-region": "eu-west-1",
+        "awslogs-stream-prefix": "ecs"
+      }
+    }
   }
 ]

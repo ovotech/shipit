@@ -1,14 +1,8 @@
 ---
 AWSTemplateFormatVersion: 2010-09-09
-Description: Load balancer and task role for the ECS service and an Elasticsearch instance
+Description: ECS cluster, ECS task/service stuff, load balancer and an Elasticsearch domain
 
 Parameters:
-  Environment:
-    Type: String
-    AllowedValues: [ UAT, PRD ]
-  ECSInstancesSecurityGroup:
-    Type: AWS::EC2::SecurityGroup::Id
-    Description: The security group for the EC2 instances in the ECS cluster
   VPC:
     Type: AWS::EC2::VPC::Id
   LoadBalancerSubnets:
@@ -20,12 +14,22 @@ Parameters:
 
 Resources:
 
+  ECRRepo:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: shipit
+
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: shipit
+
   ECSTaskRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
         Statement:
-          - 
+          -
             Effect: Allow
             Principal:
               Service:
@@ -34,7 +38,7 @@ Resources:
               - sts:AssumeRole
       Path: /
       Policies:
-        - 
+        -
           PolicyName: read-write-elasticsearch
           PolicyDocument:
             Statement:
@@ -48,44 +52,52 @@ Resources:
                 - !GetAtt ElasticsearchDomain.DomainArn
                 - !Sub "${ElasticsearchDomain.DomainArn}/*"
         -
-          PolicyName: read-credstash
+          PolicyName: read-parameter-store
           PolicyDocument:
             Statement:
             - Effect: Allow
               Action:
-                - 'kms:Decrypt'
-              Resource:
-                - !Sub "arn:aws:kms:eu-west-1:${AWS::AccountId}:key/*"
+                - 'ssm:Describe*'
+                - 'ssm:List*'
+              Resource: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:*"
             - Effect: Allow
               Action:
-                - 'dynamodb:GetItem'
-                - 'dynamodb:Query'
-              Resource:
-                - !Sub "arn:aws:dynamodb:eu-west-1:${AWS::AccountId}:table/credential-store"
+                - 'ssm:Get*'
+              Resource: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/shipit.*"
 
+  ECSServiceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: 'Shipit ECS service'
+      VpcId: !Ref VPC
+
+  # ECS service will only accept traffic from the load balancer
+  LoadBalancerCanSendTrafficToECSService:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref ECSServiceSecurityGroup
+      IpProtocol: tcp
+      FromPort: 9000
+      ToPort: 9000
+      SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
+
+  # Load balancer accepts traffic from everywhere,
+  # and can only forward it to the ECS service
   LoadBalancerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
-    Properties: 
+    Properties:
       GroupDescription: 'Open port 443 to the world'
-
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort: '443'
-          ToPort: '443'
+          FromPort: 443
+          ToPort: 443
           CidrIp: 0.0.0.0/0
-
       SecurityGroupEgress:
         - IpProtocol: tcp
-          FromPort: '32768'
-          ToPort: '61000'
-          DestinationSecurityGroupId:
-            Ref: ECSInstancesSecurityGroup
-      Tags:
-        - Key: Environment
-          Value:
-            Ref: Environment
-      VpcId:
-        Ref: VPC
+          FromPort: 9000
+          ToPort: 9000
+          DestinationSecurityGroupId: !Ref ECSServiceSecurityGroup
+      VpcId: !Ref VPC
 
   LoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
@@ -94,33 +106,28 @@ Resources:
         - Key: access_logs.s3.enabled
           Value: true
         - Key: access_logs.s3.bucket
-          Value: ovo-comms-logs
+          Value: ovo-eng-services-logs
         - Key: access_logs.s3.prefix
-          Value: !Sub "shipit/${Environment}/loadbalancer"
+          Value: !Sub "shipit/loadbalancer"
       Scheme: internet-facing
       SecurityGroups:
         - Ref: LoadBalancerSecurityGroup
       Subnets:
         Ref: LoadBalancerSubnets
-      Tags:
-        - Key: Environment
-          Value:
-            Ref: Environment
 
   ECSTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckPath: '/healthcheck'
       HealthCheckProtocol: HTTP
-      Port: 80
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 5
+      Port: 9000
       Protocol: HTTP
+      TargetType: ip
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
           Value: 30
-      Tags:
-        - Key: Environment
-          Value:
-            Ref: Environment
       VpcId:
         Ref: VPC
 
@@ -129,39 +136,36 @@ Resources:
     Properties:
       DefaultActions:
       - Type: forward
-        TargetGroupArn: !Ref 'ECSTargetGroup'
-      LoadBalancerArn: !Ref 'LoadBalancer'
-      Port: '443'
+        TargetGroupArn: !Ref ECSTargetGroup
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 443
       Protocol: HTTPS
       Certificates:
-        - CertificateArn: !Ref 'LoadBalancerCertificateArn'
-
-  ECSALBListenerRule:
-    Type: AWS::ElasticLoadBalancingV2::ListenerRule
-    Properties:
-      Actions:
-      - Type: forward
-        TargetGroupArn: !Ref 'ECSTargetGroup'
-      Conditions:
-      - Field: path-pattern
-        Values: [/]
-      ListenerArn: !Ref 'ALBListener'
-      Priority: 1
+        - CertificateArn: !Ref LoadBalancerCertificateArn
 
   ElasticsearchDomain:
     Type: AWS::Elasticsearch::Domain
-    Properties: 
+    Properties:
+      # TODO VPC config?
       EBSOptions:
         EBSEnabled: true
         VolumeSize: 10
       ElasticsearchClusterConfig:
         InstanceCount: 2
         InstanceType: t2.small.elasticsearch
-      ElasticsearchVersion: "5.5"
+      ElasticsearchVersion: 5.5
+      SnapshotOptions:
+        AutomatedSnapshotStartHour: 1
+      AccessPolicies:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: "es:*"
+            Resource: "*"
       Tags:
-        - Key: Environment
-          Value:
-            Ref: Environment
         - Key: Service
           Value: shipit
 
