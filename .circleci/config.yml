@@ -9,17 +9,17 @@ jobs:
       - checkout
       - setup_remote_docker
       - restore_cache:
-        keys:
-          - '{{ .Environment.CIRCLE_PROJECT_REPONAME }}-dependencies-{{ checksum "build.sbt" }}'
+          keys:
+            - '{{ .Environment.CIRCLE_PROJECT_REPONAME }}-dependencies-{{ checksum "build.sbt" }}'
       - run: sbt test:compile
       - save_cache:
-        key: '{{ .Environment.CIRCLE_PROJECT_REPONAME }}-dependencies-{{ checksum "build.sbt" }}'
-        paths:
-          - /home/circleci/.ivy2
-          - /home/circleci/.sbt
-          - /home/circleci/.coursier
-          - project/target/resolution-cache
-          - target/resolution-cache
+          key: '{{ .Environment.CIRCLE_PROJECT_REPONAME }}-dependencies-{{ checksum "build.sbt" }}'
+          paths:
+            - /home/circleci/.ivy2
+            - /home/circleci/.sbt
+            - /home/circleci/.coursier
+            - project/target/resolution-cache
+            - target/resolution-cache
       - run: sbt test docker:publishLocal
       - run:
           name: Publish docker image if master branch
