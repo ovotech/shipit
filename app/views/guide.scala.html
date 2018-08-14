@@ -59,14 +59,6 @@
     -d buildId=123 \
     -d notifySlackChannel=comms-deployments</pre>
 
-  <p>Finally, you can also notify :shipit: about failed or cancelled builds:</p>
-
-  <pre>$ curl https://shipit.ovotech.org.uk/deployments?apikey=[your-key-here] \
-    -d team=comms \
-    -d service=gateway-event-manager \
-    -d buildId=123 \
-    -d result=failed</pre>
-
   <p>For a real-world example, take a look at <a href="https://github.com/ovotech/comms-ci-scripts/blob/master/notify_shipit.sh" target="_blank">the script the comms team use in CircleCI</a>.</p>
 
 }

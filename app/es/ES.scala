@@ -44,14 +44,12 @@ object ES {
         teamQuery: Option[String],
         serviceQuery: Option[String],
         buildIdQuery: Option[String],
-        resultQuery: Option[DeploymentResult],
         page: Int
     ) = Reader[JestClient, Page[Identified[Deployment]]] { jest =>
       val filters = Seq(
         teamQuery.map(x => s"""{ "match": { "team": "$x" } }"""),
         serviceQuery.map(x => s"""{ "match": { "service": "$x" } }"""),
-        buildIdQuery.map(x => s"""{ "match": { "buildId": "$x" } }"""),
-        resultQuery.map(x => s"""{ "match": { "result": "$x" } }""")
+        buildIdQuery.map(x => s"""{ "match": { "buildId": "$x" } }""")
       ).flatten
       val query =
         s"""{
@@ -97,8 +95,7 @@ object ES {
         "service"   -> deployment.service,
         "buildId"   -> deployment.buildId,
         "timestamp" -> deployment.timestamp.toString,
-        "links"     -> linksList,
-        "result"    -> deployment.result.toString
+        "links"     -> linksList
       ) ++
         deployment.note.map("note"                   -> _) ++
         deployment.jiraComponent.map("jiraComponent" -> _)
@@ -286,8 +283,7 @@ object ES {
            |            "title": { "type" : "string" },
            |            "url": { "type" : "string" }
            |          }
-           |        },
-           |        "result" : { "type" : "string", "index": "not_analyzed" }
+           |        }
            |      }
            |    }
            |  }

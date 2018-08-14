@@ -2,7 +2,6 @@ package slack
 
 import cats.data.Kleisli
 import models.Deployment
-import models.DeploymentResult.{Cancelled, Failed, Succeeded}
 import play.api.libs.json.{JsString, JsValue, Json}
 import play.api.libs.json.Json.{arr, obj}
 import play.api.libs.ws.{WSClient, WSResponse}
@@ -19,16 +18,9 @@ object Slack {
   }
 
   def buildPayload(deployment: Deployment, channel: Option[String]): JsValue = {
-    val (message, colour) = deployment.result match {
-      case Succeeded =>
-        (s"Service [${deployment.team}/${deployment.service}] was deployed successfully.", "#00D000")
-      case Failed =>
-        (s"Deployment of service [${deployment.team}/${deployment.service}] failed.", "#D00000")
-      case Cancelled =>
-        (s"Deployment of service [${deployment.team}/${deployment.service}] was cancelled.", "#DDDD00")
-    }
-
-    val fields = buildFields(deployment)
+    val message = s"Service [${deployment.team}/${deployment.service}] was deployed successfully."
+    val colour  = "#00D000"
+    val fields  = buildFields(deployment)
 
     val withoutChannel = obj(
       "attachments" -> arr(

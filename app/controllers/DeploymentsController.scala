@@ -5,8 +5,7 @@ import java.time.OffsetDateTime
 import com.gu.googleauth.{AuthAction, GoogleAuthConfig, UserIdentity}
 import es.ES
 import logic.Deployments
-import models.DeploymentResult.Succeeded
-import models.{DeploymentResult, Link}
+import models.Link
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.libs.ws.WSClient
@@ -34,20 +33,14 @@ class DeploymentsController(controllerComponents: ControllerComponents,
     Ok(views.html.index())
   }
 
-  def search(team: Option[String],
-             service: Option[String],
-             buildId: Option[String],
-             result: Option[String],
-             page: Int) = authAction { implicit request =>
-    implicit val user: UserIdentity = request.user
-    val showAdminColumn             = ctx.isAdmin(user)
-    val (teamQuery, serviceQuery, buildIdQuery, resultQuery) =
-      (team.filter(_.nonEmpty),
-       service.filter(_.nonEmpty),
-       buildId.filter(_.nonEmpty),
-       result.flatMap(DeploymentResult.fromLowerCaseString))
-    val searchResult = ES.Deployments.search(teamQuery, serviceQuery, buildIdQuery, resultQuery, page).run(jestClient)
-    Ok(views.html.deployments.search(searchResult, teamQuery, serviceQuery, buildIdQuery, resultQuery, showAdminColumn))
+  def search(team: Option[String], service: Option[String], buildId: Option[String], page: Int) = authAction {
+    implicit request =>
+      implicit val user: UserIdentity = request.user
+      val showAdminColumn             = ctx.isAdmin(user)
+      val (teamQuery, serviceQuery, buildIdQuery) =
+        (team.filter(_.nonEmpty), service.filter(_.nonEmpty), buildId.filter(_.nonEmpty))
+      val searchResult = ES.Deployments.search(teamQuery, serviceQuery, buildIdQuery, page).run(jestClient)
+      Ok(views.html.deployments.search(searchResult, teamQuery, serviceQuery, buildIdQuery, showAdminColumn))
   }
 
   def create = apiKeyAuth.ApiKeyAuthAction.async { implicit request =>
@@ -60,7 +53,6 @@ class DeploymentsController(controllerComponents: ControllerComponents,
             |- one or more links (e.g. links[0][title]=PR, links[0][url]=http://github.com/my-pr)
             |- a 'jiraComponent' field (only needed if you want shipit to create a JIRA release ticket for the deployment)
             |- a 'note' field containing any notes about the deployment
-            |- a 'result' field containing the result of the deployment ('succeeded', 'failed' or 'cancelled')
             |- a 'notifySlackChannel' field containing an additional Slack channel that you want to notify (#announce_change will always be notified)
             |""".stripMargin
           )
@@ -75,7 +67,6 @@ class DeploymentsController(controllerComponents: ControllerComponents,
             OffsetDateTime.now(),
             data.links.getOrElse(Nil),
             data.note,
-            data.result.getOrElse(Succeeded),
             data.notifySlackChannel
           )
           .run(ctx)
@@ -106,13 +97,8 @@ object DeploymentsController {
       buildId: String,
       links: Option[List[Link]],
       note: Option[String],
-      result: Option[DeploymentResult with Product with Serializable], // doesn't compile unless you specify the type like this, no idea why
       notifySlackChannel: Option[String]
   )
-
-  private val deploymentResult = nonEmptyText
-    .verifying(DeploymentResult.fromLowerCaseString(_).isDefined)
-    .transform(DeploymentResult.fromLowerCaseString(_).get, DeploymentResult.toLowerCaseString)
 
   val DeploymentForm = Form(
     mapping(
@@ -127,7 +113,6 @@ object DeploymentsController {
             "url"   -> nonEmptyText
           )(Link.apply)(Link.unapply))),
       "note"               -> optional(text),
-      "result"             -> optional(deploymentResult),
       "notifySlackChannel" -> optional(nonEmptyText)
     )(DeploymentFormData.apply)(DeploymentFormData.unapply))
 

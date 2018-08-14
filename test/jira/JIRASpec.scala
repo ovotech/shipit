@@ -3,7 +3,7 @@ package jira
 import java.time.{Clock, Instant, OffsetDateTime, ZoneId}
 
 import io.circe.parser._
-import models.{Deployment, DeploymentResult, Link}
+import models.{Deployment, Link}
 import org.scalatest._
 import play.api.libs.json.Json
 
@@ -20,8 +20,7 @@ class JIRASpec extends FlatSpec with Matchers with OptionValues {
         Link("PR", "https://github.com/pr"),
         Link("CI", "https://circleci.com/build/123")
       ),
-      note = Some("this build was awesome"),
-      result = DeploymentResult.Succeeded
+      note = Some("this build was awesome")
     )
     val payload =
       JIRA.buildPayload(deployment,
