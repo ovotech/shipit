@@ -1,41 +1,63 @@
 version: 2
+
 jobs:
   build:
     working_directory: ~/shipit
-    machine: true
+    docker:
+      - image: ovotech/identity-circle-base
     steps:
-       - checkout
+      - checkout
+      - setup_remote_docker
+      - restore_cache:
+        keys:
+          - '{{ .Environment.CIRCLE_PROJECT_REPONAME }}-dependencies-{{ checksum "build.sbt" }}'
+      - run: sbt test:compile
+      - save_cache:
+        key: '{{ .Environment.CIRCLE_PROJECT_REPONAME }}-dependencies-{{ checksum "build.sbt" }}'
+        paths:
+          - /home/circleci/.ivy2
+          - /home/circleci/.sbt
+          - /home/circleci/.coursier
+          - project/target/resolution-cache
+          - target/resolution-cache
+      - run: sbt test docker:publishLocal
+      - run:
+          name: Publish docker image if master branch
+          command: |
+            if [ "${CIRCLE_BRANCH}" == "master" -a "${CIRCLE_PROJECT_USERNAME}" == "ovotech" ]; then
+              scripts/ci/publish-docker-image.sh
+            else
+              echo "Not publishing Docker image"
+            fi
 
-       # Install credstash
-       - restore_cache:
-           keys:
-             - "{{ .Environment.CIRCLE_PROJECT_REPONAME }}-credstash"
-       - run: pip install credstash
-       - save_cache:
-           key: "{{ .Environment.CIRCLE_PROJECT_REPONAME }}-credstash"
-           paths:
-             - /home/circleci/.cache/pip
+  deploy:
+    working_directory: ~/shipit
+    docker:
+      - image: ovotech/identity-circle-base
+    steps:
+      - checkout
+      - run:
+          name: Deploy to ECS
+          command: scripts/ci/deploy-to-ecs.sh
+      - run:
+          name: Notify Shipit
+          command: |
+            curl https://shipit.ovotech.org.uk/deployments?apikey=$SHIPIT_API_KEY \
+              -d "team=eng-services" \
+              -d "service=shipit" \
+              -d "buildId=$CIRCLE_BUILD_NUM" \
+              -d "links[0].title=CircleCI build" \
+              -d "links[0].url=$CIRCLE_BUILD_URL"
 
-       - restore_cache:
-           keys:
-             - "{{ .Environment.CIRCLE_PROJECT_REPONAME }}-{{ .Branch }}"
-             - "{{ .Environment.CIRCLE_PROJECT_REPONAME }}-master"
-       - run: sbt test:compile
-       - save_cache:
-           key: "{{ .Environment.CIRCLE_PROJECT_REPONAME }}-{{ .Branch }}"
-           paths:
-             - /home/circleci/.ivy2
-             - /home/circleci/.sbt
-             - /home/circleci/.coursier
-             - project/target/resolution-cache
-             - target/resolution-cache
-       - run: sbt test docker:publishLocal
-       - deploy:
-           name: Deploy if master branch
-           command: |
-             if [ "${CIRCLE_BRANCH}" == "master" -a "${CIRCLE_PROJECT_USERNAME}" == "ovotech" ]; then
-               git clone git@github.com:ovotech/comms-ci-scripts
-               comms-ci-scripts/publish_docker_image.sh
-               comms-ci-scripts/deploy_to_ecs.sh -s shipit PRD aws/container-definition.json
-               comms-ci-scripts/comment_on_last_merged_pr.sh
-             fi
+workflows:
+  version: 2
+  default:
+    jobs:
+      - build
+      - deploy:
+          requires:
+            - build
+          filters:
+            branches:
+              only:
+                - master
