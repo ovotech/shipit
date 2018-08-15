@@ -6,6 +6,7 @@ import com.amazonaws.auth.profile.ProfileCredentialsProvider
 import com.google.common.base.Supplier
 import controllers._
 import com.gu.googleauth.{AntiForgeryChecker, AuthAction, GoogleAuthConfig, UserIdentity}
+import datadog.Datadog
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.client.config.HttpClientConfig
 import jira.JIRA
@@ -67,6 +68,8 @@ class AppComponents(context: Context, config: Config)
 
   val slackCtx = Slack.Context(wsClient, config.slack.webhookUrl.value)
 
+  val datadogCtx = Datadog.Context(wsClient, config.datadog.apiKey.value)
+
   val jiraCtx = JIRA.Context(
     wsClient,
     config.jira.browseTicketsUrl,
@@ -78,7 +81,7 @@ class AppComponents(context: Context, config: Config)
   val isAdmin: UserIdentity => Boolean =
     (user: UserIdentity) => config.admin.adminEmailAddresses.contains(user.email)
 
-  val deploymentsCtx = Deployments.Context(jestClient, slackCtx, jiraCtx, isAdmin)
+  val deploymentsCtx = Deployments.Context(jestClient, slackCtx, datadogCtx, jiraCtx, isAdmin)
 
   val authAction = new AuthAction[AnyContent](googleAuthConfig,
                                               routes.AuthController.login(),
