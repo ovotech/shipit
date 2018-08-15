@@ -1,6 +1,5 @@
 import java.net.{HttpURLConnection, URL}
 
-import com.amazonaws.util.EC2MetadataUtils
 import cats.syntax.either._
 import cats.instances.parallel._
 import cats.syntax.parallel._
@@ -8,7 +7,6 @@ import ciris._
 import ciris.cats._
 import ciris.aws.ssm._
 
-import scala.util.Try
 import scala.util.control.NonFatal
 
 case class ESConfig(
@@ -34,6 +32,18 @@ object SlackConfig {
 
   def load(): Either[ConfigErrors, SlackConfig] = {
     loadConfig(param[Secret[String]]("shipit.slack.webhookUrl"))(SlackConfig.apply)
+  }
+
+}
+
+case class DatadogConfig(
+    apiKey: Secret[String]
+)
+
+object DatadogConfig {
+
+  def load(): Either[ConfigErrors, DatadogConfig] = {
+    loadConfig(param[Secret[String]]("shipit.datadog.apiKey"))(DatadogConfig.apply)
   }
 
 }
@@ -129,6 +139,7 @@ object PlayConfig {
 case class Config(
     es: ESConfig,
     slack: SlackConfig,
+    datadog: DatadogConfig,
     jira: JiraConfig,
     google: GoogleConfig,
     admin: AdminConfig,
@@ -167,6 +178,7 @@ object Config {
     (
       ESConfig.load(),
       SlackConfig.load(),
+      DatadogConfig.load(),
       JiraConfig.load(),
       GoogleConfig.load(runningInAWS),
       AdminConfig.load(),

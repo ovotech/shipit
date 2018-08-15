@@ -8,6 +8,7 @@ import cats.data.Kleisli
 import cats.syntax.option._
 import cats.instances.future._
 import com.gu.googleauth.UserIdentity
+import datadog.Datadog
 import es.ES
 import io.searchbox.client.JestClient
 import jira.JIRA
@@ -24,6 +25,7 @@ object Deployments {
 
   case class Context(jestClient: JestClient,
                      slackCtx: Slack.Context,
+                     datadogCtx: Datadog.Context,
                      jiraCtx: JIRA.Context,
                      isAdmin: UserIdentity => Boolean)
 
@@ -44,10 +46,15 @@ object Deployments {
       _                  <- persistToES(enrichedDeployment)
       slackResp          <- sendMainSlackNotification(enrichedDeployment)
       secondSlackResp    <- sendSlackNotificationToCustomChannel(enrichedDeployment, notifySlackChannel)
+      datadogResp        <- sendEventToDatadog(enrichedDeployment)
     } yield {
       Logger.info(
         s"""
-           |Created deployment: $enrichedDeployment. First Slack response: $slackResp. Second Slack response: $secondSlackResp. JIRA response: $jiraResp
+           |Created deployment: $enrichedDeployment.
+           |- First Slack response: $slackResp.
+           |- Second Slack response: $secondSlackResp.
+           |- JIRA response: $jiraResp.
+           |- Datadog response: $datadogResp
          """.stripMargin
       )
       enrichedDeployment
@@ -80,5 +87,8 @@ object Deployments {
       case None     => Kleisli.pure[Future, Context, Option[WSResponse]](None)
     }
   }
+
+  private def sendEventToDatadog(deployment: Deployment): Kleisli[Future, Context, WSResponse] =
+    Datadog.sendEvent(deployment).local[Context](_.datadogCtx)
 
 }
