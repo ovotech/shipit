@@ -6,6 +6,7 @@ import com.amazonaws.auth.profile.ProfileCredentialsProvider
 import com.google.common.base.Supplier
 import controllers._
 import com.gu.googleauth.{AntiForgeryChecker, AuthAction, GoogleAuthConfig, UserIdentity}
+import com.gu.play.secretrotation.DualSecretTransition.InitialSecret
 import datadog.Datadog
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.client.config.HttpClientConfig
@@ -40,7 +41,10 @@ class AppComponents(context: Context, config: Config)
     clientSecret = config.google.clientSecret.value,
     redirectUrl = config.google.redirectUrl,
     domain = "ovoenergy.com",
-    antiForgeryChecker = AntiForgeryChecker.borrowSettingsFromPlay(httpConfiguration)
+    antiForgeryChecker = AntiForgeryChecker(
+      InitialSecret(httpConfiguration.secret),
+      AntiForgeryChecker.signatureAlgorithmFromPlay(httpConfiguration)
+    )
   )
 
   val jestClient: JestClient = {
