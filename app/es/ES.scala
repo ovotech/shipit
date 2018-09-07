@@ -273,7 +273,7 @@ object ES {
            |{
            |  "${Types.ApiKey}" : {
            |    "properties" : {
-           |      "key" : { "type" : "keyword", "index" : false },
+           |      "key" : { "type" : "keyword" },
            |      "description" : { "type" : "text" },
            |      "createdAt" : { "type" : "date" },
            |      "createdBy" : { "type" : "keyword" },
