@@ -12,7 +12,6 @@ import play.api.libs.ws.WSClient
 import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.ExecutionContext.Implicits.global
 
 class DeploymentsController(controllerComponents: ControllerComponents,
                             authAction: AuthAction[AnyContent],
