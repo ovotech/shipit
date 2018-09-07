@@ -10,6 +10,8 @@ GET     /deployments                controllers.DeploymentsController.search(tea
 POST    /deployments                controllers.DeploymentsController.create
 POST    /deployments/:id/delete     controllers.DeploymentsController.delete(id)
 
+GET     /services                   controllers.ServicesController.list(days: Int ?= 99999)
+
 GET     /api-keys                   controllers.ApiKeysController.list(page: Int ?= 1)
 POST    /api-keys                   controllers.ApiKeysController.create
 POST    /api-keys/:id/disable       controllers.ApiKeysController.disable(id)

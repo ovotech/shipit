@@ -1,6 +1,6 @@
 package es
 
-import java.time.OffsetDateTime
+import java.time.{Instant, OffsetDateTime, ZoneOffset}
 
 import io.circe.parser._
 import io.circe.generic.auto._
@@ -81,9 +81,64 @@ object ES {
       Page(items, page, result.getTotal.toInt)
     }
 
-    def listServices(deployedInLastNDays: Int): Reader[JestClient, List[Service]] = Reader { jest =>
-      // TODO
-      Nil
+    def listServices(deployedInLastNDays: Int): Reader[JestClient, Seq[Service]] = Reader { jest =>
+      val query =
+        s"""
+          |{
+          |  "query": {
+          |    "range": {
+          |      "timestamp": {
+          |        "gte" : "now-${deployedInLastNDays}d/d"
+          |      }
+          |    }
+          |  },
+          |  "size": 0,
+          |  "aggs": {
+          |    "by_team": {
+          |      "terms": {
+          |        "field": "team",
+          |        "size": 500
+          |      },
+          |      "aggs": {
+          |        "by_service": {
+          |          "terms": {
+          |            "field": "service",
+          |            "size": 500
+          |          },
+          |          "aggs": {
+          |            "last_deployment": {
+          |              "max": {
+          |                "field": "timestamp"
+          |              }
+          |            }
+          |          }
+          |        }
+          |      }
+          |    }
+          |  }
+          |}
+        """.stripMargin
+
+      val action = new Search.Builder(query)
+        .addIndex(IndexName)
+        .addType(Types.Deployment)
+        .build()
+
+      val result = jest.execute(action)
+
+      val teamBuckets = result.getAggregations.getTermsAggregation("by_team").getBuckets.asScala
+
+      val services = for {
+        team <- teamBuckets
+        services = team.getTermsAggregation("by_service").getBuckets.asScala
+        service <- services
+      } yield {
+        val lastDeploymentEpochMillis = service.getMaxAggregation("last_deployment").getMax.toLong
+        val lastDeployment            = OffsetDateTime.ofInstant(Instant.ofEpochMilli(lastDeploymentEpochMillis), ZoneOffset.UTC)
+        Service(team.getKey, service.getKey, lastDeployment)
+      }
+
+      services.sortBy(_.team)
     }
 
     def delete(id: String): Reader[JestClient, Either[String, Unit]] = executeAndRefresh(_delete(id))

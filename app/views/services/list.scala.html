@@ -1,0 +1,38 @@
+@(services: Seq[Service], days: Int)(implicit user: com.gu.googleauth.UserIdentity)
+
+@import views.ViewHelper._
+
+@main {
+
+  <div class="page-header">
+    <h1>Services</h1>
+  </div>
+
+  <form method="get" action="@routes.ServicesController.list(0)" class="form form-horizontal">
+    <div class="form-group">
+      <label class="col-sm-4 control-label" for="team">Show services deployed in the last N days</label>
+      <div class="col-sm-2">
+        <input type="text" class="form-control" id="days" name="days" value="@days">
+      </div>
+      <div class="col-sm-4">
+        <button type="submit" class="btn btn-primary">Filter</button>
+      </div>
+    </div>
+  </form>
+
+  <table class="table table-striped">
+    <thead>
+      <tr><th>Team</th><th>Service</th><th>Last deployment</th></tr>
+    </thead>
+    <tbody>
+      @for(item <- services) {
+        <tr>
+          <td>@item.team</td>
+          <td>@item.service</td>
+          <td>@formatDate(item.lastDeployed) (<time class="timeago" datetime="@item.lastDeployed.toString">@formatDate(item.lastDeployed)</time>)</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+
+}
