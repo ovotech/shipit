@@ -98,12 +98,15 @@ class AppComponents(context: Context, config: Config)
     new ApiKeysController(controllerComponents, authAction, googleAuthConfig, wsClient, jestClient)
   val deploymentsController =
     new DeploymentsController(controllerComponents, authAction, apiKeyAuth, googleAuthConfig, wsClient, deploymentsCtx)
+  val servicesController =
+    new ServicesController(controllerComponents, authAction, googleAuthConfig, wsClient, jestClient)
   val authController = new AuthController(controllerComponents, googleAuthConfig, wsClient)
 
   lazy val router: Router = new Routes(
     httpErrorHandler,
     mainController,
     deploymentsController,
+    servicesController,
     apiKeysController,
     authController,
     assets
