@@ -20,7 +20,7 @@ import scala.collection.JavaConverters._
 
 object ES {
 
-  private val IndexName = "shipit"
+  private val IndexName = "shipit_v2"
   private object Types {
     val ApiKey     = "apikey"
     val Deployment = "deployment"
@@ -45,7 +45,7 @@ object ES {
         serviceQuery: Option[String],
         buildIdQuery: Option[String],
         page: Int
-    ) = Reader[JestClient, Page[Identified[Deployment]]] { jest =>
+    ): Reader[JestClient, Page[Identified[Deployment]]] = Reader { jest =>
       val filters = Seq(
         teamQuery.map(x => s"""{ "match": { "team": "$x" } }"""),
         serviceQuery.map(x => s"""{ "match": { "service": "$x" } }"""),
@@ -79,6 +79,11 @@ object ES {
         .asScala
         .flatMap(hit => parseHit(hit.source, hit.id))
       Page(items, page, result.getTotal.toInt)
+    }
+
+    def listServices(deployedInLastNDays: Int): Reader[JestClient, List[Service]] = Reader { jest =>
+      // TODO
+      Nil
     }
 
     def delete(id: String): Reader[JestClient, Either[String, Unit]] = executeAndRefresh(_delete(id))
@@ -153,7 +158,7 @@ object ES {
         ApiKey(id, key, description, createdAt, createdBy, active = true)
     }
 
-    def findByKey(key: String) = Reader[JestClient, Option[ApiKey]] { jest =>
+    def findByKey(key: String): Reader[JestClient, Option[ApiKey]] = Reader { jest =>
       val query =
         s"""{
            |  "size": 1,
@@ -171,7 +176,7 @@ object ES {
         .headOption
     }
 
-    def list(createdBy: String, page: Int) = Reader[JestClient, Seq[ApiKey]] { jest =>
+    def list(createdBy: String, page: Int): Reader[JestClient, Seq[ApiKey]] = Reader { jest =>
       val query =
         s"""{
            |  "from": ${pageToOffset(page)},
@@ -190,11 +195,11 @@ object ES {
         .flatMap(hit => parseHit(hit.source, hit.id))
     }
 
-    def disable(keyId: String) = executeAndRefresh(updateActiveFlag(keyId, active = false))
+    def disable(keyId: String): Reader[JestClient, Unit] = executeAndRefresh(updateActiveFlag(keyId, active = false))
 
-    def enable(keyId: String) = executeAndRefresh(updateActiveFlag(keyId, active = true))
+    def enable(keyId: String): Reader[JestClient, Unit] = executeAndRefresh(updateActiveFlag(keyId, active = true))
 
-    def delete(keyId: String) = executeAndRefresh(_delete(keyId))
+    def delete(keyId: String): Reader[JestClient, Unit] = executeAndRefresh(_delete(keyId))
 
     private def _delete(keyId: String) = Reader[JestClient, Unit] { jest =>
       val action = new Delete.Builder(keyId)
@@ -256,40 +261,44 @@ object ES {
 
   private def createIndex(alreadyExists: Boolean) = Reader[JestClient, Unit] { jest =>
     if (!alreadyExists) {
-      jest.execute(new CreateIndex.Builder(IndexName).settings(s"""
+      val settings =
+        s"""
            |{
-           |  "settings" : {
-           |    "number_of_shards" : 1,
-           |    "number_of_replicas" : 1
+           |  "number_of_shards" : 1,
+           |  "number_of_replicas" : 1
+           |}
+        """.stripMargin
+      val mappings =
+        s"""
+           |{
+           |  "${Types.ApiKey}" : {
+           |    "properties" : {
+           |      "key" : { "type" : "keyword", "index" : false },
+           |      "description" : { "type" : "text" },
+           |      "createdAt" : { "type" : "date" },
+           |      "createdBy" : { "type" : "keyword" },
+           |      "active" : { "type" : "boolean" }
+           |    }
            |  },
-           |  "mappings" : {
-           |    "${Types.ApiKey}" : {
-           |      "properties" : {
-           |        "key" : { "type" : "string", "index" : "not_analyzed" },
-           |        "description" : { "type" : "string" },
-           |        "createdAt" : { "type" : "date" },
-           |        "createdBy" : { "type" : "string", "index": "not_analyzed" },
-           |        "active" : { "type" : "boolean" }
-           |      }
-           |    },
-           |    "${Types.Deployment}": {
-           |      "properties" : {
-           |        "team" : { "type" : "string" },
-           |        "service" : { "type" : "string" },
-           |        "buildId" : { "type" : "string", "index" : "not_analyzed" },
-           |        "timestamp" : { "type" : "date" },
-           |        "links": {
-           |          "properties": {
-           |            "title": { "type" : "string" },
-           |            "url": { "type" : "string" }
-           |          }
+           |  "${Types.Deployment}": {
+           |    "properties" : {
+           |      "team" : { "type" : "keyword" },
+           |      "service" : { "type" : "keyword" },
+           |      "buildId" : { "type" : "keyword" },
+           |      "timestamp" : { "type" : "date" },
+           |      "links": {
+           |        "properties": {
+           |          "title": { "type" : "keyword" },
+           |          "url": { "type" : "keyword" }
            |        }
            |      }
            |    }
            |  }
            |}
-         """.stripMargin).build())
-      Logger.info("Created ES index")
+         """.stripMargin
+      val result = jest.execute(new CreateIndex.Builder(IndexName).settings(settings).mappings(mappings).build())
+
+      Logger.info(s"Created ES index. Result: $result")
     }
   }
 
