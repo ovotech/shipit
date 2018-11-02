@@ -55,8 +55,11 @@ class ApiKeysController(controllerComponents: ControllerComponents,
 
   def delete(keyId: String) = authAction { request =>
     implicit val user: UserIdentity = request.user
-    ES.ApiKeys.delete(keyId).run(jestClient)
-    Redirect(routes.ApiKeysController.list()).flashing("info" -> "Deleted API key")
+    val succeeded                   = ES.ApiKeys.delete(keyId).run(jestClient)
+    if (succeeded)
+      Redirect(routes.ApiKeysController.list()).flashing("info" -> "Deleted API key")
+    else
+      Redirect(routes.ApiKeysController.list()).flashing("error" -> "Failed to delete API key")
   }
 
 }

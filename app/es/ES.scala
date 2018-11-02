@@ -256,7 +256,7 @@ object ES {
         s"""
            |{
            |   "doc" : {
-           |      "lastUsed": ${OffsetDateTime.now()}
+           |      "lastUsed": "${OffsetDateTime.now()}"
            |   }
            |}
          """.stripMargin
@@ -265,21 +265,27 @@ object ES {
         .`type`(Types.ApiKey)
         .id(keyId)
         .build()
-      jest.execute(action)
+      val result = jest.execute(action)
+      if (!result.isSucceeded)
+        Logger.warn(s"Failed to update last-used timestamp for API key. Error: ${result.getErrorMessage}")
     }
 
     def disable(keyId: String): Reader[JestClient, Unit] = executeAndRefresh(updateActiveFlag(keyId, active = false))
 
     def enable(keyId: String): Reader[JestClient, Unit] = executeAndRefresh(updateActiveFlag(keyId, active = true))
 
-    def delete(keyId: String): Reader[JestClient, Unit] = executeAndRefresh(_delete(keyId))
+    def delete(keyId: String): Reader[JestClient, Boolean] = executeAndRefresh(_delete(keyId))
 
-    private def _delete(keyId: String) = Reader[JestClient, Unit] { jest =>
+    private def _delete(keyId: String) = Reader[JestClient, Boolean] { jest =>
       val action = new Delete.Builder(keyId)
         .index(IndexName)
         .`type`(Types.ApiKey)
         .build()
-      jest.execute(action)
+      val result = jest.execute(action)
+      if (!result.isSucceeded) {
+        Logger.warn(s"Failed to delete API key. Error: ${result.getErrorMessage}")
+      }
+      result.isSucceeded
     }
 
     private def updateActiveFlag(keyId: String, active: Boolean) = Reader[JestClient, Unit] { jest =>
