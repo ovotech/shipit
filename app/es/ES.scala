@@ -210,7 +210,7 @@ object ES {
           .build()
         val result = jest.execute(action)
         val id     = result.getId
-        ApiKey(id, key, description, createdAt, createdBy, active = true)
+        ApiKey(id, key, description, createdAt, createdBy, active = true, lastUsed = None)
     }
 
     def findByKey(key: String): Reader[JestClient, Option[ApiKey]] = Reader { jest =>
@@ -231,23 +231,41 @@ object ES {
         .headOption
     }
 
-    def list(createdBy: String, page: Int): Reader[JestClient, Seq[ApiKey]] = Reader { jest =>
+    def list(page: Int): Reader[JestClient, Page[ApiKey]] = Reader { jest =>
       val query =
         s"""{
            |  "from": ${pageToOffset(page)},
            |  "size": $PageSize,
-           |  "query": { "term": { "createdBy": "$createdBy" } }
+           |  "query": { "match_all": {} }
            |}""".stripMargin
       val action = new Search.Builder(query)
         .addIndex(IndexName)
         .addType(Types.ApiKey)
-        .addSort(new Sort("createdAt", Sorting.DESC))
+        .addSort(new Sort("createdBy"))
         .build()
       val result = jest.execute(action)
-      result
+      val items = result
         .getHits(classOf[JsonElement])
         .asScala
         .flatMap(hit => parseHit(hit.source, hit.id))
+      Page(items, page, result.getTotal.toInt)
+    }
+
+    def updateLastUsed(keyId: String): Reader[JestClient, Unit] = Reader[JestClient, Unit] { jest =>
+      val update =
+        s"""
+           |{
+           |   "doc" : {
+           |      "lastUsed": ${OffsetDateTime.now()}
+           |   }
+           |}
+         """.stripMargin
+      val action = new Update.Builder(update)
+        .index(IndexName)
+        .`type`(Types.ApiKey)
+        .id(keyId)
+        .build()
+      jest.execute(action)
     }
 
     def disable(keyId: String): Reader[JestClient, Unit] = executeAndRefresh(updateActiveFlag(keyId, active = false))
@@ -332,7 +350,8 @@ object ES {
            |      "description" : { "type" : "text" },
            |      "createdAt" : { "type" : "date" },
            |      "createdBy" : { "type" : "keyword" },
-           |      "active" : { "type" : "boolean" }
+           |      "active" : { "type" : "boolean" },
+           |      "lastUsed" : { "type" : "date" },
            |    }
            |  },
            |  "${Types.Deployment}": {

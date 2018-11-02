@@ -1,5 +1,5 @@
 organization := "com.ovoenergy"
-scalaVersion := "2.12.6"
+scalaVersion := "2.12.7"
 scalacOptions += "-Ypartial-unification"
 
 // The version number is fixed, for the sake of simpler deployment scripts.
@@ -7,7 +7,7 @@ scalacOptions += "-Ypartial-unification"
 version := "1.0"
 
 resolvers += Resolver.bintrayRepo("ovotech", "maven")
-val circeVersion = "0.9.3"
+val circeVersion = "0.10.1"
 val cirisVersion = "0.10.2"
 libraryDependencies ++= Seq(
   ws,
@@ -15,11 +15,11 @@ libraryDependencies ++= Seq(
   "io.circe"                   %% "circe-parser"                   % circeVersion,
   "io.circe"                   %% "circe-generic"                  % circeVersion,
   "com.typesafe.akka"          %% "akka-slf4j"                     % "2.5.16",
-  "org.typelevel"              %% "cats-core"                      % "1.3.1",
+  "org.typelevel"              %% "cats-core"                      % "1.4.0",
   "com.gu"                     %% "play-googleauth"                % "0.7.7",
   "io.searchbox"               % "jest"                            % "6.3.1",
   "vc.inreach.aws"             % "aws-signing-request-interceptor" % "0.0.21",
-  "com.amazonaws"              % "aws-java-sdk-core"               % "1.11.404",
+  "com.amazonaws"              % "aws-java-sdk-core"               % "1.11.441",
   "me.moocar"                  % "logback-gelf"                    % "0.2",
   "is.cir"                     %% "ciris-core"                     % cirisVersion,
   "is.cir"                     %% "ciris-cats"                     % cirisVersion,

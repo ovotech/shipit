@@ -1,4 +1,5 @@
-@(items: Seq[ApiKey])(implicit user: com.gu.googleauth.UserIdentity, request: RequestHeader, flash: Flash)
+@import java.time.OffsetDateTime
+@(page: es.ES.Page[ApiKey])(implicit user: com.gu.googleauth.UserIdentity, request: RequestHeader, flash: Flash)
 
 @import views.ViewHelper._
 @import helper._
@@ -11,6 +12,7 @@
 
   <p>You will need an API key if you want to send deployment events to :shipit:</p>
 
+
   @for(info <- flash.get("info")) {
     <div class="alert alert-info" role="alert">@info</div>
   }
@@ -18,16 +20,19 @@
     <div class="alert alert-danger" role="alert">@error</div>
   }
 
+  <p>Here are the API keys that currently exist, sorted by the user who created them.</p>
+
   <table class="table table-striped">
     <thead>
-      <tr><th>Key</th><th>Created</th><th>Status</th><th>Description</th><th>Actions</th></tr>
+      <tr><th>Key</th><th>Created by</th><th>Status</th><th>Last used</th><th>Description</th><th>Actions</th></tr>
     </thead>
     <tbody>
-      @for(item <- items) {
+      @for(item <- page.items) {
         <tr>
           <td>@item.key</td>
-          <td>@formatDate(item.createdAt) by @item.createdBy</td>
+          <td>@item.createdBy</td>
           <td>@statusBadge(item)</td>
+          <td>@item.lastUsed.fold[Html](Html("(unknown)")){timestamp: OffsetDateTime => <time class="timeago" datetime="@timestamp.toString">@formatDate(timestamp)</time>}</td>
           <td>@item.description</td>
           <td>
             <form id="disable_@item.id" method="post" action="@routes.ApiKeysController.disable(item.id)">@CSRF.formField</form>
@@ -44,6 +49,15 @@
       }
     </tbody>
   </table>
+
+  <ul class="pager">
+    @if(page.pageNumber > 1) {
+      <li><a href="@routes.ApiKeysController.list(page.pageNumber - 1)">&larr; Prev</a></li>
+    }
+    @if(page.pageNumber < page.lastPage) {
+      <li><a href="@routes.ApiKeysController.list(page.pageNumber + 1)">Next &rarr;</a></li>
+    }
+  </ul>
 
   <div class="panel panel-default">
     <div class="panel-heading">Create an API key</div>
