@@ -20,8 +20,8 @@ class ApiKeysController(controllerComponents: ControllerComponents,
 
   def list(page: Int) = authAction { implicit request =>
     implicit val user: UserIdentity = request.user
-    val items                       = ES.ApiKeys.list(request.user.email, page).run(jestClient)
-    Ok(views.html.apikeys.list(items))
+    val keys                        = ES.ApiKeys.list(page).run(jestClient)
+    Ok(views.html.apikeys.list(keys))
   }
 
   def create = authAction { implicit request =>

@@ -231,23 +231,24 @@ object ES {
         .headOption
     }
 
-    def list(createdBy: String, page: Int): Reader[JestClient, Seq[ApiKey]] = Reader { jest =>
+    def list(page: Int): Reader[JestClient, Page[ApiKey]] = Reader { jest =>
       val query =
         s"""{
            |  "from": ${pageToOffset(page)},
            |  "size": $PageSize,
-           |  "query": { "term": { "createdBy": "$createdBy" } }
+           |  "query": { "match_all": {} }
            |}""".stripMargin
       val action = new Search.Builder(query)
         .addIndex(IndexName)
         .addType(Types.ApiKey)
-        .addSort(new Sort("createdAt", Sorting.DESC))
+        .addSort(new Sort("createdBy"))
         .build()
       val result = jest.execute(action)
-      result
+      val items = result
         .getHits(classOf[JsonElement])
         .asScala
         .flatMap(hit => parseHit(hit.source, hit.id))
+      Page(items, page, result.getTotal.toInt)
     }
 
     def disable(keyId: String): Reader[JestClient, Unit] = executeAndRefresh(updateActiveFlag(keyId, active = false))
