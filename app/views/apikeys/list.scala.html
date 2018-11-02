@@ -1,3 +1,4 @@
+@import java.time.OffsetDateTime
 @(page: es.ES.Page[ApiKey])(implicit user: com.gu.googleauth.UserIdentity, request: RequestHeader, flash: Flash)
 
 @import views.ViewHelper._
@@ -23,7 +24,7 @@
 
   <table class="table table-striped">
     <thead>
-      <tr><th>Key</th><th>Created by</th><th>Status</th><th>Description</th><th>Actions</th></tr>
+      <tr><th>Key</th><th>Created by</th><th>Status</th><th>Last used</th><th>Description</th><th>Actions</th></tr>
     </thead>
     <tbody>
       @for(item <- page.items) {
@@ -31,6 +32,7 @@
           <td>@item.key</td>
           <td>@item.createdBy</td>
           <td>@statusBadge(item)</td>
+          <td>@item.lastUsed.fold[Html](Html("(unknown)")){timestamp: OffsetDateTime => <time class="timeago" datetime="@timestamp.toString">@formatDate(timestamp)</time>}</td>
           <td>@item.description</td>
           <td>
             <form id="disable_@item.id" method="post" action="@routes.ApiKeysController.disable(item.id)">@CSRF.formField</form>

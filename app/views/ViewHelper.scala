@@ -3,7 +3,7 @@ package views
 import java.time.{OffsetDateTime, ZoneOffset}
 import java.time.format.DateTimeFormatter
 
-import models.{ApiKey, Deployment}
+import models.ApiKey
 
 object ViewHelper {
 
@@ -11,13 +11,6 @@ object ViewHelper {
     offsetDateTime
       .atZoneSameInstant(ZoneOffset.UTC)
       .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) + " GMT"
-
-  def formatOptDate(opt: Option[OffsetDateTime]): String =
-    opt.map(formatDate).getOrElse("(unknown)")
-
-  def dateToLong(offsetDateTime: OffsetDateTime): Long = {
-    offsetDateTime.toInstant.toEpochMilli
-  }
 
   def statusBadge(apiKey: ApiKey) =
     if (apiKey.active)

@@ -8,5 +8,6 @@ case class ApiKey(
     description: Option[String],
     createdAt: OffsetDateTime,
     createdBy: String,
-    active: Boolean
+    active: Boolean,
+    lastUsed: Option[OffsetDateTime]
 )

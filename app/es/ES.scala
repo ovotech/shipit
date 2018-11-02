@@ -210,7 +210,7 @@ object ES {
           .build()
         val result = jest.execute(action)
         val id     = result.getId
-        ApiKey(id, key, description, createdAt, createdBy, active = true)
+        ApiKey(id, key, description, createdAt, createdBy, active = true, lastUsed = None)
     }
 
     def findByKey(key: String): Reader[JestClient, Option[ApiKey]] = Reader { jest =>
@@ -249,6 +249,23 @@ object ES {
         .asScala
         .flatMap(hit => parseHit(hit.source, hit.id))
       Page(items, page, result.getTotal.toInt)
+    }
+
+    def updateLastUsed(keyId: String): Reader[JestClient, Unit] = Reader[JestClient, Unit] { jest =>
+      val update =
+        s"""
+           |{
+           |   "doc" : {
+           |      "lastUsed": ${OffsetDateTime.now()}
+           |   }
+           |}
+         """.stripMargin
+      val action = new Update.Builder(update)
+        .index(IndexName)
+        .`type`(Types.ApiKey)
+        .id(keyId)
+        .build()
+      jest.execute(action)
     }
 
     def disable(keyId: String): Reader[JestClient, Unit] = executeAndRefresh(updateActiveFlag(keyId, active = false))
@@ -333,7 +350,8 @@ object ES {
            |      "description" : { "type" : "text" },
            |      "createdAt" : { "type" : "date" },
            |      "createdBy" : { "type" : "keyword" },
-           |      "active" : { "type" : "boolean" }
+           |      "active" : { "type" : "boolean" },
+           |      "lastUsed" : { "type" : "date" },
            |    }
            |  },
            |  "${Types.Deployment}": {
