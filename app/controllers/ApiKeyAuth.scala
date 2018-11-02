@@ -18,7 +18,7 @@ class ApiKeyAuth(jestClient: JestClient, actionBuilder: DefaultActionBuilder)(im
           ES.ApiKeys.findByKey(key).run(jestClient) match {
             case Some(apiKey) if apiKey.active =>
               // OK, update last-used timestamp for API key and allow request to proceed
-              ES.ApiKeys.updateLastUsed(key).run(jestClient)
+              ES.ApiKeys.updateLastUsed(apiKey.id).run(jestClient)
               None
             case _ =>
               Some(Unauthorized("Invalid API key"))
