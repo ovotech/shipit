@@ -48,6 +48,7 @@ Resources:
                 - es:ESHttpHead
                 - es:ESHttpPost
                 - es:ESHttpPut
+                - es:ESHttpDelete
               Resource:
                 - !GetAtt ElasticsearchDomain.DomainArn
                 - !Sub "${ElasticsearchDomain.DomainArn}/*"
