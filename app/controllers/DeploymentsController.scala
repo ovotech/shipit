@@ -49,9 +49,9 @@ class DeploymentsController(controllerComponents: ControllerComponents,
           BadRequest(
             """You must include at least the following form fields in your POST: 'team', 'service', 'buildId'.
             |You may also include the following fields:
-            |- one or more links (e.g. links[0][title]=PR, links[0][url]=http://github.com/my-pr)
+            |- one or more links (e.g. links[0].title=PR, links[0].url=http://github.com/my-pr) (link title and URL must both be non-empty strings)
             |- a 'jiraComponent' field (only needed if you want shipit to create a JIRA release ticket for the deployment)
-            |- a 'note' field containing any notes about the deployment
+            |- a 'note' field containing any notes about the deployment (can be an empty string)
             |- a 'notifySlackChannel' field containing an additional Slack channel that you want to notify (#announce_change will always be notified)
             |""".stripMargin
           )
