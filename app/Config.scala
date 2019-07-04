@@ -48,24 +48,6 @@ object DatadogConfig {
 
 }
 
-case class JiraConfig(
-    username: String,
-    password: Secret[String],
-    browseTicketsUrl: String = "https://ovotech.atlassian.net/browse/",
-    issueApiUrl: String = "https://ovotech.atlassian.net/rest/api/2/issue"
-)
-
-object JiraConfig {
-
-  def load(): Either[ConfigErrors, JiraConfig] = {
-    loadConfig(
-      param[String]("shipit.jira.username"),
-      param[Secret[String]]("shipit.jira.password")
-    )((username, password) => JiraConfig(username, password))
-  }
-
-}
-
 case class GoogleConfig(
     clientId: String,
     clientSecret: Secret[String],
@@ -140,7 +122,6 @@ case class Config(
     es: ESConfig,
     slack: SlackConfig,
     datadog: DatadogConfig,
-    jira: JiraConfig,
     google: GoogleConfig,
     admin: AdminConfig,
     logging: LoggingConfig,
@@ -179,7 +160,6 @@ object Config {
       ESConfig.load(),
       SlackConfig.load(),
       DatadogConfig.load(),
-      JiraConfig.load(),
       GoogleConfig.load(runningInAWS),
       AdminConfig.load(),
       LoggingConfig.load(runningInAWS),

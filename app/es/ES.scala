@@ -157,8 +157,7 @@ object ES {
         "timestamp" -> deployment.timestamp.toString,
         "links"     -> linksList
       ) ++
-        deployment.note.map("note"                   -> _) ++
-        deployment.jiraComponent.map("jiraComponent" -> _)
+        deployment.note.map("note" -> _)
 
       val action = new Index.Builder(map.asJava)
         .index(IndexName)
