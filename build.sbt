@@ -1,5 +1,5 @@
 organization := "com.ovoenergy"
-scalaVersion := "2.12.7"
+scalaVersion := "2.12.8"
 scalacOptions += "-Ypartial-unification"
 
 // The version number is fixed, for the sake of simpler deployment scripts.
