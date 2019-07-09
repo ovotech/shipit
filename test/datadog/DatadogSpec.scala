@@ -13,7 +13,6 @@ class DatadogSpec extends FlatSpec with Matchers with OptionValues {
     val deployment = Deployment(
       team = "Team America",
       service = "my lovely service",
-      jiraComponent = None,
       buildId = "123",
       timestamp = OffsetDateTime.now,
       links = Seq(

@@ -39,16 +39,6 @@
     -d 'links[1].url=https://github.com/ovotech/comms-gateway-event-manager/pull/42' \
     -d 'note=Build started by Chris'</pre>
 
-  <p>If you want to create a JIRA ticket for the release, include a <code>jiraComponent</code> field containing the name of the appropriate JIRA component for the deployment.</p>
-
-  <p>For example:</p>
-
-  <pre>$ curl https://shipit.ovotech.org.uk/deployments?apikey=[your-key-here] \
-    -d team=comms \
-    -d service=gateway-event-manager \
-    -d buildId=123 \
-    -d 'jiraComponent=Comms Platform'</pre>
-
   <p>:shipit: will always send a notification to the #announce_change Slack channel. You can also notify a custom channel if you want to. To do so, include a <code>notifySlackChannel</code> field in your POST.</p>
 
   <p>For example:</p>

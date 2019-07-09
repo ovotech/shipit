@@ -7,7 +7,6 @@ case class Link(title: String, url: String)
 case class Deployment(
     team: String,
     service: String,
-    jiraComponent: Option[String],
     buildId: String,
     timestamp: OffsetDateTime,
     links: Seq[Link],

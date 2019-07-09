@@ -11,8 +11,6 @@ import com.gu.googleauth.UserIdentity
 import datadog.Datadog
 import es.ES
 import io.searchbox.client.JestClient
-import jira.JIRA
-import jira.JIRA.CreateIssueKey
 import models._
 import play.api.Logger
 import play.api.libs.ws.WSResponse
@@ -26,38 +24,33 @@ object Deployments {
   case class Context(jestClient: JestClient,
                      slackCtx: Slack.Context,
                      datadogCtx: Datadog.Context,
-                     jiraCtx: JIRA.Context,
                      isAdmin: UserIdentity => Boolean)
 
   def createDeployment(team: String,
                        service: String,
-                       jiraComponent: Option[String],
                        buildId: String,
                        timestamp: OffsetDateTime,
                        links: Seq[Link],
                        note: Option[String],
                        notifySlackChannel: Option[String]): Kleisli[Future, Context, Deployment] = {
 
-    val deployment = Deployment(team, service, jiraComponent, buildId, timestamp, links, note)
+    val deployment = Deployment(team, service, buildId, timestamp, links, note)
 
     for {
-      jiraResp           <- JIRA.createAndTransitionIssueIfPossible(deployment).local[Context](_.jiraCtx)
-      enrichedDeployment <- enrichWithJiraInfo(deployment, jiraResp)
-      _                  <- persistToES(enrichedDeployment)
-      slackResp          <- sendMainSlackNotification(enrichedDeployment)
-      secondSlackResp    <- sendSlackNotificationToCustomChannel(enrichedDeployment, notifySlackChannel)
-      datadogResp        <- sendEventToDatadog(enrichedDeployment)
+      _               <- persistToES(deployment)
+      slackResp       <- sendMainSlackNotification(deployment)
+      secondSlackResp <- sendSlackNotificationToCustomChannel(deployment, notifySlackChannel)
+      datadogResp     <- sendEventToDatadog(deployment)
     } yield {
       Logger.info(
         s"""
-           |Created deployment: $enrichedDeployment.
+           |Created deployment: $deployment.
            |- First Slack response: $slackResp.
            |- Second Slack response: $secondSlackResp.
-           |- JIRA response: $jiraResp.
            |- Datadog response: $datadogResp
          """.stripMargin
       )
-      enrichedDeployment
+      deployment
     }
   }
 
@@ -66,15 +59,6 @@ object Deployments {
       .create(deployment)
       .local[Context](_.jestClient)
       .mapK(FunctionK.lift[Id, Future](Future.successful))
-
-  private def enrichWithJiraInfo(deployment: Deployment, issueKeyOpt: Option[CreateIssueKey]) =
-    Kleisli[Future, JIRA.Context, Deployment] { ctx =>
-      Future.successful(issueKeyOpt match {
-        case None => deployment
-        case Some(issueKey) =>
-          deployment.copy(links = deployment.links :+ Link("Jira Ticket", ctx.browseTicketsUrl + issueKey.key))
-      })
-    }.local[Context](_.jiraCtx)
 
   private def sendMainSlackNotification(deployment: Deployment): Kleisli[Future, Context, WSResponse] =
     Slack.sendNotification(deployment, channel = None).local[Context](_.slackCtx)

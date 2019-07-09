@@ -10,7 +10,6 @@ import com.gu.play.secretrotation.DualSecretTransition.InitialSecret
 import datadog.Datadog
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.client.config.HttpClientConfig
-import jira.JIRA
 import logic.Deployments
 import org.apache.http.impl.client.HttpClientBuilder
 import play.api.ApplicationLoader.Context
@@ -74,18 +73,10 @@ class AppComponents(context: Context, config: Config)
 
   val datadogCtx = Datadog.Context(wsClient, config.datadog.apiKey.value)
 
-  val jiraCtx = JIRA.Context(
-    wsClient,
-    config.jira.browseTicketsUrl,
-    config.jira.issueApiUrl,
-    config.jira.username,
-    config.jira.password.value
-  )
-
   val isAdmin: UserIdentity => Boolean =
     (user: UserIdentity) => config.admin.adminEmailAddresses.contains(user.email)
 
-  val deploymentsCtx = Deployments.Context(jestClient, slackCtx, datadogCtx, jiraCtx, isAdmin)
+  val deploymentsCtx = Deployments.Context(jestClient, slackCtx, datadogCtx, isAdmin)
 
   val authAction = new AuthAction[AnyContent](googleAuthConfig,
                                               routes.AuthController.login(),
