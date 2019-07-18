@@ -19,7 +19,7 @@ libraryDependencies ++= Seq(
   "com.gu"                     %% "play-googleauth"                % "0.7.7",
   "io.searchbox"               % "jest"                            % "6.3.1",
   "vc.inreach.aws"             % "aws-signing-request-interceptor" % "0.0.21",
-  "com.amazonaws"              % "aws-java-sdk-core"               % "1.11.441",
+  "com.amazonaws"              % "aws-java-sdk-core"               % "1.11.593",
   "me.moocar"                  % "logback-gelf"                    % "0.2",
   "is.cir"                     %% "ciris-core"                     % cirisVersion,
   "is.cir"                     %% "ciris-cats"                     % cirisVersion,
