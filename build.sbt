@@ -20,7 +20,7 @@ libraryDependencies ++= Seq(
   "io.searchbox"               % "jest"                            % "6.3.1",
   "vc.inreach.aws"             % "aws-signing-request-interceptor" % "0.0.21",
   "com.amazonaws"              % "aws-java-sdk-core"               % "1.11.602",
-  "me.moocar"                  % "logback-gelf"                    % "0.2",
+  "me.moocar"                  % "logback-gelf"                    % "0.12",
   "is.cir"                     %% "ciris-core"                     % cirisVersion,
   "is.cir"                     %% "ciris-cats"                     % cirisVersion,
   "com.ovoenergy"              %% "ciris-aws-ssm"                  % "0.6",
