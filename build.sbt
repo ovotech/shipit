@@ -8,7 +8,7 @@ version := "1.0"
 
 resolvers += Resolver.bintrayRepo("ovotech", "maven")
 val circeVersion = "0.10.1"
-val cirisVersion = "0.10.2"
+val cirisVersion = "0.12.1"
 libraryDependencies ++= Seq(
   ws,
   filters,
