@@ -7,7 +7,7 @@ scalacOptions += "-Ypartial-unification"
 version := "1.0"
 
 resolvers += Resolver.bintrayRepo("ovotech", "maven")
-val circeVersion = "0.10.1"
+val circeVersion = "0.12.2"
 val cirisVersion = "0.10.2"
 libraryDependencies ++= Seq(
   ws,
