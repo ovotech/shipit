@@ -41,7 +41,7 @@ class AppComponents(context: Context, config: Config)
     redirectUrl = config.google.redirectUrl,
     domain = "ovoenergy.com",
     antiForgeryChecker = AntiForgeryChecker(
-      InitialSecret(httpConfiguration.secret),
+      InitialSecret(httpConfiguration.secret.secret),
       AntiForgeryChecker.signatureAlgorithmFromPlay(httpConfiguration)
     )
   )
