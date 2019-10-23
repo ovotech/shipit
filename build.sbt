@@ -14,7 +14,7 @@ libraryDependencies ++= Seq(
   filters,
   "io.circe"                   %% "circe-parser"                   % circeVersion,
   "io.circe"                   %% "circe-generic"                  % circeVersion,
-  "com.typesafe.akka"          %% "akka-slf4j"                     % "2.5.16",
+  "com.typesafe.akka"          %% "akka-slf4j"                     % "2.5.26",
   "org.typelevel"              %% "cats-core"                      % "1.4.0",
   "com.gu"                     %% "play-googleauth"                % "0.7.7",
   "io.searchbox"               % "jest"                            % "6.3.1",
