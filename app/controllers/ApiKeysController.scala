@@ -10,12 +10,13 @@ import play.api.mvc._
 import play.api.data._
 import play.api.data.Forms._
 
-class ApiKeysController(controllerComponents: ControllerComponents,
-                        authAction: AuthAction[AnyContent],
-                        val authConfig: GoogleAuthConfig,
-                        val wsClient: WSClient,
-                        jestClient: JestClient)
-    extends AbstractController(controllerComponents) {
+class ApiKeysController(
+    controllerComponents: ControllerComponents,
+    authAction: AuthAction[AnyContent],
+    val authConfig: GoogleAuthConfig,
+    val wsClient: WSClient,
+    jestClient: JestClient
+) extends AbstractController(controllerComponents) {
   import ApiKeysController._
 
   def list(page: Int) = authAction { implicit request =>
@@ -71,6 +72,7 @@ object ApiKeysController {
   val CreateKeyForm = Form(
     mapping(
       "description" -> optional(text)
-    )(CreateKeyFormData.apply)(CreateKeyFormData.unapply))
+    )(CreateKeyFormData.apply)(CreateKeyFormData.unapply)
+  )
 
 }

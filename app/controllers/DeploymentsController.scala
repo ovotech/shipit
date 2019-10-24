@@ -13,12 +13,14 @@ import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class DeploymentsController(controllerComponents: ControllerComponents,
-                            authAction: AuthAction[AnyContent],
-                            apiKeyAuth: ApiKeyAuth,
-                            val authConfig: GoogleAuthConfig,
-                            val wsClient: WSClient,
-                            ctx: Deployments.Context)(implicit val ec: ExecutionContext)
+class DeploymentsController(
+    controllerComponents: ControllerComponents,
+    authAction: AuthAction[AnyContent],
+    apiKeyAuth: ApiKeyAuth,
+    val authConfig: GoogleAuthConfig,
+    val wsClient: WSClient,
+    ctx: Deployments.Context
+)(implicit val ec: ExecutionContext)
     extends AbstractController(controllerComponents) {
 
   import DeploymentsController._
@@ -54,7 +56,7 @@ class DeploymentsController(controllerComponents: ControllerComponents,
             |- a 'notifySlackChannel' field containing an additional Slack channel that you want to notify (#announce_change will always be notified)
             |""".stripMargin
           )
-      ),
+        ),
       data => {
         Deployments
           .createDeployment(
@@ -106,9 +108,12 @@ object DeploymentsController {
           mapping(
             "title" -> nonEmptyText,
             "url"   -> nonEmptyText
-          )(Link.apply)(Link.unapply))),
+          )(Link.apply)(Link.unapply)
+        )
+      ),
       "note"               -> optional(text),
       "notifySlackChannel" -> optional(nonEmptyText)
-    )(DeploymentFormData.apply)(DeploymentFormData.unapply))
+    )(DeploymentFormData.apply)(DeploymentFormData.unapply)
+  )
 
 }

@@ -65,7 +65,8 @@ class AppComponents(context: Context, config: Config)
     factory.setHttpClientConfig(
       new HttpClientConfig.Builder(url)
         .multiThreaded(true)
-        .build())
+        .build()
+    )
     factory.getObject
   }
 
@@ -78,9 +79,10 @@ class AppComponents(context: Context, config: Config)
 
   val deploymentsCtx = Deployments.Context(jestClient, slackCtx, datadogCtx, isAdmin)
 
-  val authAction = new AuthAction[AnyContent](googleAuthConfig,
-                                              routes.AuthController.login(),
-                                              controllerComponents.parsers.default)(executionContext)
+  val authAction =
+    new AuthAction[AnyContent](googleAuthConfig, routes.AuthController.login(), controllerComponents.parsers.default)(
+      executionContext
+    )
 
   val apiKeyAuth = new ApiKeyAuth(jestClient, defaultActionBuilder)
 
