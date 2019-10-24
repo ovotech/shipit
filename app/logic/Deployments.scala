@@ -23,18 +23,22 @@ object Deployments {
 
   private val logger = LoggerFactory.getLogger(getClass)
 
-  case class Context(jestClient: JestClient,
-                     slackCtx: Slack.Context,
-                     datadogCtx: Datadog.Context,
-                     isAdmin: UserIdentity => Boolean)
+  case class Context(
+      jestClient: JestClient,
+      slackCtx: Slack.Context,
+      datadogCtx: Datadog.Context,
+      isAdmin: UserIdentity => Boolean
+  )
 
-  def createDeployment(team: String,
-                       service: String,
-                       buildId: String,
-                       timestamp: OffsetDateTime,
-                       links: Seq[Link],
-                       note: Option[String],
-                       notifySlackChannel: Option[String]): Kleisli[Future, Context, Deployment] = {
+  def createDeployment(
+      team: String,
+      service: String,
+      buildId: String,
+      timestamp: OffsetDateTime,
+      links: Seq[Link],
+      note: Option[String],
+      notifySlackChannel: Option[String]
+  ): Kleisli[Future, Context, Deployment] = {
 
     val deployment = Deployment(team, service, buildId, timestamp, links, note)
 
@@ -67,7 +71,8 @@ object Deployments {
 
   private def sendSlackNotificationToCustomChannel(
       deployment: Deployment,
-      channel: Option[String]): Kleisli[Future, Context, Option[WSResponse]] = {
+      channel: Option[String]
+  ): Kleisli[Future, Context, Option[WSResponse]] = {
     channel match {
       case Some(ch) => Slack.sendNotification(deployment, channel = Some(ch)).local[Context](_.slackCtx).map(_.some)
       case None     => Kleisli.pure[Future, Context, Option[WSResponse]](None)
