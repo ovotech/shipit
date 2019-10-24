@@ -4,10 +4,21 @@ import cats.syntax.either._
 import cats.instances.parallel._
 import cats.syntax.parallel._
 import ciris._
-import ciris.cats._
 import ciris.aws.ssm._
+import ciris.api.Id
 
 import scala.util.control.NonFatal
+
+object CirisSyntax {
+
+  implicit class CirisOps[A](a: A) {
+    def toConfigResult[B >: A]: ConfigResult[Id, B] =
+      ConfigResult[Id, B](a.asRight[ConfigErrors])
+  }
+
+}
+
+import CirisSyntax._
 
 case class ESConfig(
     region: String = "eu-west-1",
@@ -16,7 +27,7 @@ case class ESConfig(
 
 object ESConfig {
 
-  def load(): Either[ConfigErrors, ESConfig] = {
+  def load(): ConfigResult[Id, ESConfig] = {
     loadConfig(
       param[String]("shipit.es.endpointUrl")
     )(endpointUrl => ESConfig.apply(endpointUrl = endpointUrl))
@@ -30,7 +41,7 @@ case class SlackConfig(
 
 object SlackConfig {
 
-  def load(): Either[ConfigErrors, SlackConfig] = {
+  def load(): ConfigResult[Id, SlackConfig] = {
     loadConfig(param[Secret[String]]("shipit.slack.webhookUrl"))(SlackConfig.apply)
   }
 
@@ -42,7 +53,7 @@ case class DatadogConfig(
 
 object DatadogConfig {
 
-  def load(): Either[ConfigErrors, DatadogConfig] = {
+  def load(): ConfigResult[Id, DatadogConfig] = {
     loadConfig(param[Secret[String]]("shipit.datadog.apiKey"))(DatadogConfig.apply)
   }
 
@@ -56,7 +67,7 @@ case class GoogleConfig(
 
 object GoogleConfig {
 
-  def load(runningInAWS: Boolean): Either[ConfigErrors, GoogleConfig] = {
+  def load(runningInAWS: Boolean): ConfigResult[Id, GoogleConfig] = {
     if (runningInAWS) {
       loadConfig(
         param[String]("shipit.google.clientId"),
@@ -68,7 +79,7 @@ object GoogleConfig {
         clientId = "925213464964-ppl7hcrpsflavpf8rtlp2mnjm5p0pi0t.apps.googleusercontent.com",
         clientSecret = Secret("I9yZu57pLe4VklD7mJuQZyel"),
         redirectUrl = "http://localhost:9000/oauth2callback"
-      ).asRight
+      ).toConfigResult
     }
   }
 
@@ -80,9 +91,8 @@ case class AdminConfig(
 
 object AdminConfig {
 
-  def load(): Either[ConfigErrors, AdminConfig] = {
-    AdminConfig(adminEmailAddresses = List("chris.birchall@ovoenergy.com")).asRight
-  }
+  def load(): ConfigResult[Id, AdminConfig] =
+    AdminConfig(adminEmailAddresses = List("chris.birchall@ovoenergy.com")).toConfigResult
 
 }
 
@@ -96,14 +106,14 @@ case object GraylogDisabledLoggingConfig extends LoggingConfig
 
 object LoggingConfig {
 
-  def load(runningInAWS: Boolean): Either[ConfigErrors, LoggingConfig] = {
+  def load(runningInAWS: Boolean): ConfigResult[Id, LoggingConfig] = {
     if (runningInAWS) {
       loadConfig(
         param[String]("shipit.graylog.hostname"),
         env[String]("HOSTNAME")
       )(GraylogEnabledLoggingConfig.apply)
     } else {
-      GraylogDisabledLoggingConfig.asRight
+      GraylogDisabledLoggingConfig.toConfigResult[LoggingConfig]
     }
   }
 
@@ -113,7 +123,7 @@ case class PlayConfig(secretKey: Secret[String])
 
 object PlayConfig {
 
-  def load(): Either[ConfigErrors, PlayConfig] =
+  def load(): ConfigResult[Id, PlayConfig] =
     loadConfig(param[Secret[String]]("shipit.play.secretKey"))(PlayConfig.apply)
 
 }
@@ -130,10 +140,7 @@ case class Config(
 
 object Config {
 
-  def unsafeLoad(): Config = load() match {
-    case Left(errors) => throw errors.toException // KABOOM!
-    case Right(c)     => c
-  }
+  def unsafeLoad(): Config = load().orThrow()
 
   private val runningInAWS: Boolean = {
     // TODO there doesn't seem to be a nice equivalent to EC2MetadataUtils for retrieving task metadata
@@ -154,9 +161,9 @@ object Config {
     }
   }
 
-  def load(): Either[ConfigErrors, Config] = {
+  def load(): ConfigResult[Id, Config] = {
     println(s"Am I running in AWS? $runningInAWS")
-    (
+    loadConfig(
       ESConfig.load(),
       SlackConfig.load(),
       DatadogConfig.load(),
@@ -164,7 +171,7 @@ object Config {
       AdminConfig.load(),
       LoggingConfig.load(runningInAWS),
       PlayConfig.load()
-    ).parMapN(Config.apply)
+    )(Config.apply)
   }
 
 }
