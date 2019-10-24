@@ -12,7 +12,7 @@ import datadog.Datadog
 import es.ES
 import io.searchbox.client.JestClient
 import models._
-import play.api.Logger
+import org.slf4j.LoggerFactory
 import play.api.libs.ws.WSResponse
 import slack.Slack
 
@@ -20,6 +20,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 object Deployments {
+
+  private val logger = LoggerFactory.getLogger(getClass)
 
   case class Context(jestClient: JestClient,
                      slackCtx: Slack.Context,
@@ -42,7 +44,7 @@ object Deployments {
       secondSlackResp <- sendSlackNotificationToCustomChannel(deployment, notifySlackChannel)
       datadogResp     <- sendEventToDatadog(deployment)
     } yield {
-      Logger.info(
+      logger.info(
         s"""
            |Created deployment: $deployment.
            |- First Slack response: $slackResp.
