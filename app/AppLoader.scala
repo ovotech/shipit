@@ -1,6 +1,6 @@
 import es.ES
 import play.api.libs.logback.LogbackLoggerConfigurator
-import play.api.{Application, ApplicationLoader, Logger}
+import play.api.{Application, ApplicationLoader}
 import play.api.ApplicationLoader.Context
 import ch.qos.logback.classic.LoggerContext
 import ch.qos.logback.classic.spi.ILoggingEvent
@@ -9,13 +9,15 @@ import org.slf4j.LoggerFactory
 
 class AppLoader extends ApplicationLoader {
 
+  private val logger = LoggerFactory.getLogger(getClass)
+
   override def load(context: Context): Application = {
     val config = Config.unsafeLoad()
-    Logger.info(s"Loaded configuration: $config")
+    logger.info(s"Loaded configuration: $config")
 
     new LogbackLoggerConfigurator().configure(context.environment)
     val loggingToGraylog = enableGraylogLogging(config.logging)
-    Logger.info(s"Logging to Graylog? $loggingToGraylog")
+    logger.info(s"Logging to Graylog? $loggingToGraylog")
 
     val components = new AppComponents(context, config)
 
