@@ -12,7 +12,7 @@ import datadog.Datadog
 import es.ES
 import io.searchbox.client.JestClient
 import models._
-import play.api.Logger
+import org.slf4j.LoggerFactory
 import play.api.libs.ws.WSResponse
 import slack.Slack
 
@@ -21,18 +21,24 @@ import scala.concurrent.Future
 
 object Deployments {
 
-  case class Context(jestClient: JestClient,
-                     slackCtx: Slack.Context,
-                     datadogCtx: Datadog.Context,
-                     isAdmin: UserIdentity => Boolean)
+  private val logger = LoggerFactory.getLogger(getClass)
 
-  def createDeployment(team: String,
-                       service: String,
-                       buildId: String,
-                       timestamp: OffsetDateTime,
-                       links: Seq[Link],
-                       note: Option[String],
-                       notifySlackChannel: Option[String]): Kleisli[Future, Context, Deployment] = {
+  case class Context(
+      jestClient: JestClient,
+      slackCtx: Slack.Context,
+      datadogCtx: Datadog.Context,
+      isAdmin: UserIdentity => Boolean
+  )
+
+  def createDeployment(
+      team: String,
+      service: String,
+      buildId: String,
+      timestamp: OffsetDateTime,
+      links: Seq[Link],
+      note: Option[String],
+      notifySlackChannel: Option[String]
+  ): Kleisli[Future, Context, Deployment] = {
 
     val deployment = Deployment(team, service, buildId, timestamp, links, note)
 
@@ -42,7 +48,7 @@ object Deployments {
       secondSlackResp <- sendSlackNotificationToCustomChannel(deployment, notifySlackChannel)
       datadogResp     <- sendEventToDatadog(deployment)
     } yield {
-      Logger.info(
+      logger.info(
         s"""
            |Created deployment: $deployment.
            |- First Slack response: $slackResp.
@@ -65,7 +71,8 @@ object Deployments {
 
   private def sendSlackNotificationToCustomChannel(
       deployment: Deployment,
-      channel: Option[String]): Kleisli[Future, Context, Option[WSResponse]] = {
+      channel: Option[String]
+  ): Kleisli[Future, Context, Option[WSResponse]] = {
     channel match {
       case Some(ch) => Slack.sendNotification(deployment, channel = Some(ch)).local[Context](_.slackCtx).map(_.some)
       case None     => Kleisli.pure[Future, Context, Option[WSResponse]](None)

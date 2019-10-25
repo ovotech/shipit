@@ -6,9 +6,11 @@ import play.api.mvc._
 
 import scala.concurrent.ExecutionContext
 
-class AuthController(controllerComponents: ControllerComponents,
-                     val authConfig: GoogleAuthConfig,
-                     val wsClient: WSClient)(implicit ec: ExecutionContext)
+class AuthController(
+    controllerComponents: ControllerComponents,
+    val authConfig: GoogleAuthConfig,
+    val wsClient: WSClient
+)(implicit ec: ExecutionContext)
     extends AbstractController(controllerComponents)
     with LoginSupport {
 

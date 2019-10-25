@@ -8,11 +8,13 @@ import play.api.mvc._
 
 import scala.concurrent.ExecutionContext
 
-class ServicesController(controllerComponents: ControllerComponents,
-                         authAction: AuthAction[AnyContent],
-                         val authConfig: GoogleAuthConfig,
-                         val wsClient: WSClient,
-                         jestClient: JestClient)(implicit val ec: ExecutionContext)
+class ServicesController(
+    controllerComponents: ControllerComponents,
+    authAction: AuthAction[AnyContent],
+    val authConfig: GoogleAuthConfig,
+    val wsClient: WSClient,
+    jestClient: JestClient
+)(implicit val ec: ExecutionContext)
     extends AbstractController(controllerComponents) {
 
   def list(days: Int) = authAction { request =>

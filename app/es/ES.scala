@@ -14,11 +14,13 @@ import io.searchbox.core.search.sort.Sort
 import io.searchbox.core.search.sort.Sort.Sorting
 import io.searchbox.indices.{CreateIndex, DeleteIndex, IndicesExists, Refresh}
 import models._
-import play.api.Logger
+import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 
 object ES {
+
+  private val logger = LoggerFactory.getLogger(getClass)
 
   private val IndexName = "shipit_v2"
   private object Types {
@@ -170,7 +172,7 @@ object ES {
 
     private def parseHit(jsonElement: JsonElement, id: String): Option[Identified[Deployment]] = {
       decode[Deployment](jsonElement.toString)
-        .leftMap(e => Logger.warn("Failed to decode deployment returned by ES", e))
+        .leftMap(e => logger.warn("Failed to decode deployment returned by ES", e))
         .map(value => Identified(id, value))
         .toOption
     }
@@ -266,7 +268,7 @@ object ES {
         .build()
       val result = jest.execute(action)
       if (!result.isSucceeded)
-        Logger.warn(s"Failed to update last-used timestamp for API key. Error: ${result.getErrorMessage}")
+        logger.warn(s"Failed to update last-used timestamp for API key. Error: ${result.getErrorMessage}")
     }
 
     def disable(keyId: String): Reader[JestClient, Unit] = executeAndRefresh(updateActiveFlag(keyId, active = false))
@@ -282,7 +284,7 @@ object ES {
         .build()
       val result = jest.execute(action)
       if (!result.isSucceeded) {
-        Logger.warn(s"Failed to delete API key. Error: ${result.getErrorMessage}")
+        logger.warn(s"Failed to delete API key. Error: ${result.getErrorMessage}")
       }
       result.isSucceeded
     }
@@ -310,7 +312,7 @@ object ES {
         incomplete <- json.as[String => ApiKey].right
       } yield incomplete.apply(id)
       either
-        .leftMap(e => Logger.warn("Failed to decode API key returned by ES", e))
+        .leftMap(e => logger.warn("Failed to decode API key returned by ES", e))
         .toOption
     }
 
@@ -377,7 +379,7 @@ object ES {
          """.stripMargin
       val result = jest.execute(new CreateIndex.Builder(IndexName).settings(settings).mappings(mappings).build())
 
-      Logger.info(s"Created ES index. Result: $result")
+      logger.info(s"Created ES index. Result: $result")
     }
   }
 
