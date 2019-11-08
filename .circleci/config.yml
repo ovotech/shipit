@@ -10,7 +10,7 @@ jobs:
       - setup_remote_docker
       - run:
           name: Install AWS CLI
-          command: pip install awscli
+          command: scripts/ci/install-aws-cli.sh
       - restore_cache:
           keys:
             - '{{ .Environment.CIRCLE_PROJECT_REPONAME }}-dependencies-{{ checksum "build.sbt" }}'
@@ -41,7 +41,7 @@ jobs:
       - checkout
       - run:
           name: Install AWS CLI
-          command: pip install awscli
+          command: scripts/ci/install-aws-cli.sh
       - run:
           name: Deploy to ECS
           command: scripts/ci/deploy-to-ecs.sh
