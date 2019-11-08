@@ -4,10 +4,13 @@ jobs:
   build:
     working_directory: ~/shipit
     docker:
-      - image: ovotech/identity-circle-base
+      - image: circleci/openjdk:11.0.5-jdk-stretch
     steps:
       - checkout
       - setup_remote_docker
+      - run:
+          name: Install AWS CLI
+          command: pip3 install awscli
       - restore_cache:
           keys:
             - '{{ .Environment.CIRCLE_PROJECT_REPONAME }}-dependencies-{{ checksum "build.sbt" }}'
@@ -33,9 +36,12 @@ jobs:
   deploy:
     working_directory: ~/shipit
     docker:
-      - image: ovotech/identity-circle-base
+      - image: circleci/openjdk:11.0.5-jdk-stretch
     steps:
       - checkout
+      - run:
+          name: Install AWS CLI
+          command: pip3 install awscli
       - run:
           name: Deploy to ECS
           command: scripts/ci/deploy-to-ecs.sh
