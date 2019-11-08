@@ -33,7 +33,7 @@ enablePlugins(PlayScala, DockerPlugin)
 scalafmtOnCompile in ThisBuild := true
 
 // Docker packaging stuff
-dockerBaseImage := "openjdk:8"
+dockerBaseImage := "adoptopenjdk:11-jdk-hotspot"
 javaOptions in Universal ++= Seq(
   // -J params will be added as jvm parameters
   "-J-Xmx512m",
