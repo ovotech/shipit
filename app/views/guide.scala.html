@@ -21,8 +21,8 @@
   <p>For example:</p>
 
   <pre>$ curl https://shipit.ovotech.org.uk/deployments?apikey=[your-key-here] \
-    -d team=comms \
-    -d service=gateway-event-manager \
+    -d team=code-monkeys \
+    -d service=banana-management-service \
     -d buildId=123</pre>
 
   <p>You can also include links and/or a short note if you want to. These will be displayed in the UI and also included in the Slack notification.</p>
@@ -30,13 +30,13 @@
   <p>For example:</p>
 
   <pre>$ curl https://shipit.ovotech.org.uk/deployments?apikey=[your-key-here] \
-    -d team=comms \
-    -d service=gateway-event-manager \
+    -d team=code-monkeys \
+    -d service=banana-management-service \
     -d buildId=123 \
     -d 'links[0].title=CircleCI build' \
-    -d 'links[0].url=https://circleci.com/gh/ovotech/comms-gateway-event-manager/123' \
+    -d 'links[0].url=https://circleci.com/gh/megacorp/banana-management-service/123' \
     -d 'links[1].title=Pull request' \
-    -d 'links[1].url=https://github.com/ovotech/comms-gateway-event-manager/pull/42' \
+    -d 'links[1].url=https://github.com/megacorp/banana-management-service/pull/42' \
     -d 'note=Build started by Chris'</pre>
 
   <p>:shipit: will always send a notification to the #announce_change Slack channel. You can also notify a custom channel if you want to. To do so, include a <code>notifySlackChannel</code> field in your POST.</p>
@@ -44,11 +44,9 @@
   <p>For example:</p>
 
   <pre>$ curl https://shipit.ovotech.org.uk/deployments?apikey=[your-key-here] \
-    -d team=comms \
-    -d service=gateway-event-manager \
+    -d team=code-monkeys \
+    -d service=banana-management-service \
     -d buildId=123 \
-    -d notifySlackChannel=comms-deployments</pre>
-
-  <p>For a real-world example, take a look at <a href="https://github.com/ovotech/comms-ci-scripts/blob/master/notify_shipit.sh" target="_blank">the script the comms team use in CircleCI</a>.</p>
+    -d notifySlackChannel=code-monkeys-deployments</pre>
 
 }
