@@ -15,7 +15,3 @@ Set `AWS_PROFILE` to point at that account, and run `sbt run`.
 e.g. `AWS_PROFILE=eng-services sbt run`.
 
 The app will load all necessary configuration from the AWS parameter store.
-
-## Documentation
-
-See https://shipit.ovotech.org.uk/guide
