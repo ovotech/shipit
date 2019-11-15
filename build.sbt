@@ -8,7 +8,7 @@ version := "1.0"
 
 resolvers += Resolver.bintrayRepo("ovotech", "maven")
 val circeVersion = "0.12.3"
-val cirisVersion = "0.12.1"
+val cirisVersion = "1.0.2"
 libraryDependencies ++= Seq(
   ws,
   filters,
@@ -21,9 +21,8 @@ libraryDependencies ++= Seq(
   "vc.inreach.aws"             % "aws-signing-request-interceptor" % "0.0.22",
   "com.amazonaws"              % "aws-java-sdk-core"               % "1.11.657",
   "me.moocar"                  % "logback-gelf"                    % "0.2",
-  "is.cir"                     %% "ciris-core"                     % cirisVersion,
-  "is.cir"                     %% "ciris-cats"                     % cirisVersion,
-  "com.ovoenergy"              %% "ciris-aws-ssm"                  % "0.12.1",
+  "is.cir"                     %% "ciris"                          % cirisVersion,
+  "com.ovoenergy"              %% "ciris-aws-ssm"                  % "1.0.0",
   "org.scalatest"              %% "scalatest"                      % "3.0.8" % Test,
   "com.github.alexarchambault" %% "scalacheck-shapeless_1.14"      % "1.2.3" % Test,
   "org.scalacheck"             %% "scalacheck"                     % "1.14.2" % Test
