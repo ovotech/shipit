@@ -25,7 +25,7 @@ libraryDependencies ++= Seq(
   "com.ovoenergy"              %% "ciris-aws-ssm"                  % "1.0.0",
   "org.scalatest"              %% "scalatest"                      % "3.0.8" % Test,
   "com.github.alexarchambault" %% "scalacheck-shapeless_1.14"      % "1.2.3" % Test,
-  "org.scalacheck"             %% "scalacheck"                     % "1.14.2" % Test
+  "org.scalacheck"             %% "scalacheck"                     % "1.14.3" % Test
 )
 
 enablePlugins(PlayScala, DockerPlugin)
