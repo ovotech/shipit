@@ -6,8 +6,10 @@ import models.{Deployment, Link}
 import org.scalatest._
 import io.circe.parser._
 import play.api.libs.json.Json
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class SlackSpec extends FlatSpec with Matchers with OptionValues {
+class SlackSpec extends AnyFlatSpec with Matchers with OptionValues {
 
   it should "build a payload for a deployment with a note" in {
     val deployment = Deployment(
