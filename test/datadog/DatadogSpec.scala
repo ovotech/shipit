@@ -6,8 +6,10 @@ import io.circe.parser._
 import models.{Deployment, Link}
 import org.scalatest._
 import play.api.libs.json.Json
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class DatadogSpec extends FlatSpec with Matchers with OptionValues {
+class DatadogSpec extends AnyFlatSpec with Matchers with OptionValues {
 
   it should "build a payload for a Datadog event" in {
     val deployment = Deployment(

@@ -8,14 +8,14 @@ version := "1.0"
 
 resolvers += Resolver.bintrayRepo("ovotech", "maven")
 val circeVersion = "0.12.3"
-val cirisVersion = "1.0.2"
+val cirisVersion = "1.0.4"
 libraryDependencies ++= Seq(
   ws,
   filters,
   "io.circe"                   %% "circe-parser"                   % circeVersion,
   "io.circe"                   %% "circe-generic"                  % circeVersion,
   "com.typesafe.akka"          %% "akka-slf4j"                     % "2.5.26",
-  "org.typelevel"              %% "cats-core"                      % "2.0.0",
+  "org.typelevel"              %% "cats-core"                      % "2.1.0",
   "com.gu.play-googleauth"     %% "play-v27"                       % "1.0.3",
   "io.searchbox"               % "jest"                            % "6.3.1",
   "vc.inreach.aws"             % "aws-signing-request-interceptor" % "0.0.22",
@@ -23,8 +23,8 @@ libraryDependencies ++= Seq(
   "me.moocar"                  % "logback-gelf"                    % "0.2",
   "is.cir"                     %% "ciris"                          % cirisVersion,
   "com.ovoenergy"              %% "ciris-aws-ssm"                  % "1.0.0",
-  "org.scalatest"              %% "scalatest"                      % "3.0.8" % Test,
-  "com.github.alexarchambault" %% "scalacheck-shapeless_1.14"      % "1.2.4" % Test,
+  "org.scalatest"              %% "scalatest"                      % "3.1.0" % Test,
+  "com.github.alexarchambault" %% "scalacheck-shapeless_1.14"      % "1.2.3" % Test,
   "org.scalacheck"             %% "scalacheck"                     % "1.14.2" % Test
 )
 
