@@ -35,11 +35,10 @@ class AppComponents(context: Context, config: Config)
   override def configuration: Configuration =
     context.initialConfiguration ++ Configuration("play.http.secret.key" -> config.play.secretKey.value)
 
-  val googleAuthConfig = GoogleAuthConfig(
+  val googleAuthConfig = GoogleAuthConfig.withNoDomainRestriction(
     clientId = config.google.clientId,
     clientSecret = config.google.clientSecret.value,
     redirectUrl = config.google.redirectUrl,
-    domain = "ovoenergy.com",
     antiForgeryChecker = AntiForgeryChecker(
       InitialSecret(httpConfiguration.secret.secret),
       AntiForgeryChecker.signatureAlgorithmFromPlay(httpConfiguration)
