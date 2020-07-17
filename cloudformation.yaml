@@ -54,6 +54,15 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
+                  - ecr:PutImage
+                  - ecr:UploadLayerPart
+                  - ecr:InitiateLayerUpload
+                  - ecr:CompleteLayerUpload
+                  - ecr:BatchCheckLayerAvailability
+                Resource: !GetAtt ECRRepo.Arn
+              - Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
                   - ecs:DeregisterTaskDefinition
                   - ecs:RegisterTaskDefinition
                   - ec2:DescribeSubnets
