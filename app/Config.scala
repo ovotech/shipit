@@ -83,7 +83,6 @@ object AdminConfig {
     ConfigValue.default(
       AdminConfig(
         adminEmailAddresses = List(
-          "andy.summers@ovoenergy.com",
           "rui.morais@ovoenergy.com",
           "tom.verran@ovoenergy.com"
         )

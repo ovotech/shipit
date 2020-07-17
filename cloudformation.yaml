@@ -8,12 +8,17 @@ Parameters:
   LoadBalancerSubnets:
     Description: Choose all the public subnets in the VPC
     Type: List<AWS::EC2::Subnet::Id>
+  AppSubnets:
+    Description: Choose all the private subnets in the VPC
+    Type: List<AWS::EC2::Subnet::Id>
   OldAppDNSName:
     Description: DNS Name of the load balancer for the current shipit app
     Type: String
+  AppImage:
+    Description: Docker image to deploy
+    Type: String
 
 Resources:
-
   Route53Zone:
     Type: AWS::Route53::HostedZone
     Properties:
@@ -30,14 +35,14 @@ Resources:
         EvaluateTargetHealth: true
         HostedZoneId: Z32O12XQLNTSW2
 
-  LoadBalancerCertificate:
-    Type: AWS::CertificateManager::Certificate
-    Properties:
-      DomainName: shipit.ovotech.org.uk
-      ValidationMethod: DNS
-      DomainValidationOptions:
-        - HostedZoneId: !Ref Route53Zone
-          DomainName: shipit.ovotech.org.uk
+#  LoadBalancerCertificate:
+#    Type: AWS::CertificateManager::Certificate
+#    Properties:
+#      DomainName: shipit.ovotech.org.uk
+#      ValidationMethod: DNS
+#      DomainValidationOptions:
+#        - HostedZoneId: !Ref Route53Zone
+#          DomainName: shipit.ovotech.org.uk
 
   ECRRepo:
     Type: AWS::ECR::Repository
@@ -48,6 +53,46 @@ Resources:
     Type: AWS::ECS::Cluster
     Properties:
       ClusterName: shipit
+
+  ECSTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: AllowECSAuth
+          PolicyDocument:
+            Statement:
+              Effect: Allow
+              Action: ecr:GetAuthorizationToken
+              Resource: "*"
+        - PolicyName: AllowECSPull
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:GetRepositoryPolicy
+                  - ecr:DescribeRepositories
+                  - ecr:ListImages
+                  - ecr:DescribeImages
+                  - ecr:BatchGetImage
+                Resource: !GetAtt ECRRepo.Arn
+        - PolicyName: AllowLogging
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "arn:aws:logs:*:*:*"
 
   ECSTaskRole:
     Type: AWS::IAM::Role
@@ -96,6 +141,56 @@ Resources:
     Properties:
       GroupDescription: 'Shipit ECS service'
       VpcId: !Ref VPC
+
+  AppTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Cpu: "512"
+      Memory: "1024"
+      Family: shipit
+      TaskRoleArn: !GetAtt ECSTaskRole.Arn
+      ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
+      RequiresCompatibilities:
+        - FARGATE
+      NetworkMode: awsvpc
+      ContainerDefinitions:
+        - Name: shipit
+          Image: !Ref AppImage
+          Essential: true
+          Memory: 1024
+          PortMappings:
+            - ContainerPort: 9000
+              HostPort: 9000
+              Protocol: tcp
+          Ulimits:
+            - Name: nofile
+              SoftLimit: 16384
+              HardLimit: 16384
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: /ecs/shipit
+              awslogs-stream-prefix: ecs
+              awslogs-create-group: true
+              awslogs-region: !Ref "AWS::Region"
+
+  AppService:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !Ref ECSCluster
+      DesiredCount: 1
+      LaunchType: FARGATE
+      TaskDefinition: !Ref AppTaskDefinition
+#      LoadBalancers:
+#        - ContainerName: shipit
+#          ContainerPort: 9000
+#          TargetGroupArn: !Ref ECSTargetGroup
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          Subnets: !Ref AppSubnets
+          SecurityGroups:
+            - !Ref ECSServiceSecurityGroup
 
   # ECS service will only accept traffic from the load balancer
   LoadBalancerCanSendTrafficToECSService:
@@ -157,7 +252,7 @@ Resources:
     Type: AWS::SSM::Parameter
     Properties:
       Name: shipit.es.endpointUrl
-      Value: !GetAtt ElasticsearchDomain.DomainEndpoint
+      Value: !Sub "https://${ElasticsearchDomain.DomainEndpoint}"
       Type: String
 
   LoadBalancer:
@@ -192,17 +287,17 @@ Resources:
       VpcId:
         Ref: VPC
 
-  ALBListener:
-    Type: AWS::ElasticLoadBalancingV2::Listener
-    Properties:
-      DefaultActions:
-      - Type: forward
-        TargetGroupArn: !Ref ECSTargetGroup
-      LoadBalancerArn: !Ref LoadBalancer
-      Port: 443
-      Protocol: HTTPS
-      Certificates:
-        - CertificateArn: !Ref LoadBalancerCertificate
+#  ALBListener:
+#    Type: AWS::ElasticLoadBalancingV2::Listener
+#    Properties:
+#      DefaultActions:
+#      - Type: forward
+#        TargetGroupArn: !Ref ECSTargetGroup
+#      LoadBalancerArn: !Ref LoadBalancer
+#      Port: 443
+#      Protocol: HTTPS
+#      Certificates:
+#        - CertificateArn: !Ref LoadBalancerCertificate
 
   ElasticsearchDomain:
     Type: AWS::Elasticsearch::Domain
