@@ -8,11 +8,36 @@ Parameters:
   LoadBalancerSubnets:
     Description: Choose all the public subnets in the VPC
     Type: List<AWS::EC2::Subnet::Id>
-  LoadBalancerCertificateArn:
-    Description: ARN of the ACM cert to use for the load balancer
+  OldAppDNSName:
+    Description: DNS Name of the load balancer for the current shipit app
     Type: String
 
 Resources:
+
+  Route53Zone:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: shipit.ovotech.org.uk.
+
+  OldAppAlias:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      Type: A
+      Name: shipit.ovotech.org.uk.
+      HostedZoneId: !Ref Route53Zone
+      AliasTarget:
+        DNSName: !Ref OldAppDNSName
+        EvaluateTargetHealth: true
+        HostedZoneId: Z32O12XQLNTSW2
+
+  LoadBalancerCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: shipit.ovotech.org.uk
+      ValidationMethod: DNS
+      DomainValidationOptions:
+        - HostedZoneId: !Ref Route53Zone
+          DomainName: shipit.ovotech.org.uk
 
   ECRRepo:
     Type: AWS::ECR::Repository
@@ -100,6 +125,41 @@ Resources:
           DestinationSecurityGroupId: !Ref ECSServiceSecurityGroup
       VpcId: !Ref VPC
 
+  AccessLogsBucket:
+    Type: AWS::S3::Bucket
+
+  AccessLogsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref AccessLogsBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action: s3:PutObject
+            Resource: !Sub "${AccessLogsBucket.Arn}/shipit/AWSLogs/${AWS::AccountId}/*"
+            Principal:
+              AWS: arn:aws:iam::156460612806:root
+          - Effect: Allow
+            Action: s3:PutObject
+            Resource: !Sub "${AccessLogsBucket.Arn}/shipit/AWSLogs/${AWS::AccountId}/*"
+            Principal:
+              Service: delivery.logs.amazonaws.com
+            Condition:
+              StringEquals:
+                "s3:x-amz-acl": "bucket-owner-full-control"
+          - Effect: Allow
+            Action: s3:GetBucketAcl
+            Resource: !GetAtt AccessLogsBucket.Arn
+            Principal:
+              Service: delivery.logs.amazonaws.com
+
+  ElasticsearchEndpointUrl:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: shipit.es.endpointUrl
+      Value: !GetAtt ElasticsearchDomain.DomainEndpoint
+      Type: String
+
   LoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
@@ -107,9 +167,9 @@ Resources:
         - Key: access_logs.s3.enabled
           Value: true
         - Key: access_logs.s3.bucket
-          Value: ovo-eng-services-logs
+          Value: !Ref AccessLogsBucket
         - Key: access_logs.s3.prefix
-          Value: !Sub "shipit/loadbalancer"
+          Value: shipit
       Scheme: internet-facing
       SecurityGroups:
         - Ref: LoadBalancerSecurityGroup
@@ -142,7 +202,7 @@ Resources:
       Port: 443
       Protocol: HTTPS
       Certificates:
-        - CertificateArn: !Ref LoadBalancerCertificateArn
+        - CertificateArn: !Ref LoadBalancerCertificate
 
   ElasticsearchDomain:
     Type: AWS::Elasticsearch::Domain
