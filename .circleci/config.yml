@@ -59,7 +59,7 @@ jobs:
               --use-previous-template \
               --capabilities CAPABILITY_NAMED_IAM \
               --parameters ParameterKey=OldAppDNSName,UsePreviousValue=true \
-                           ParameterKey=AppImage,ParameterValue=shipit:${CIRCLE_SHA1:-$(git rev-parse HEAD)}
+                           ParameterKey=AppImage,ParameterValue=shipit:${CIRCLE_SHA1:-$(git rev-parse HEAD)} \
                            ParameterKey=VPC,UsePreviousValue=true \
                            ParameterKey=AppSubnets,UsePreviousValue=true \
                            ParameterKey=LoadBalancerSubnets,UsePreviousValue=true\
