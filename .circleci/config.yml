@@ -1,5 +1,12 @@
 version: 2
 
+new_aws_login: &new_aws_login
+  run:
+    name: Set AWS environment to the new account
+    command: |
+      echo 'export AWS_ACCESS_KEY_ID=$SHIPIT_AWS_ACCESS_KEY_ID' >> $BASH_ENV
+      echo 'export AWS_SECRET_ACCESS_KEY=$SHIPIT_AWS_SECRET_ACCESS_KEY' >> $BASH_ENV
+
 jobs:
   build:
     working_directory: ~/shipit
@@ -8,6 +15,7 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker
+      - *new_aws_login
       - run:
           name: Install AWS CLI
           command: scripts/ci/install-aws-cli.sh
@@ -27,7 +35,7 @@ jobs:
       - run:
           name: Publish docker image if master branch
           command: |
-            if [ "${CIRCLE_BRANCH}" == "master" -a "${CIRCLE_PROJECT_USERNAME}" == "ovotech" ]; then
+            if [ "${CIRCLE_BRANCH}" == "migrate-accounts" -a "${CIRCLE_PROJECT_USERNAME}" == "ovotech" ]; then
               scripts/ci/publish-docker-image.sh
             else
               echo "Not publishing Docker image"
@@ -39,21 +47,31 @@ jobs:
       - image: circleci/openjdk:11.0.5-jdk-stretch
     steps:
       - checkout
+      - *new_aws_login
       - run:
           name: Install AWS CLI
           command: scripts/ci/install-aws-cli.sh
       - run:
           name: Deploy to ECS
-          command: scripts/ci/deploy-to-ecs.sh
-      - run:
-          name: Notify Shipit
           command: |
-            curl https://shipit.ovotech.org.uk/deployments?apikey=$SHIPIT_API_KEY \
-              -d "team=eng-services" \
-              -d "service=shipit" \
-              -d "buildId=$CIRCLE_BUILD_NUM" \
-              -d "links[0].title=CircleCI build" \
-              -d "links[0].url=$CIRCLE_BUILD_URL"
+            aws cloudformation update-stack \
+              --stack-name shipit \
+              --use-previous-template \
+              --capabilities CAPABILITY_NAMED_IAM \
+              --parameters ParameterKey=OldAppDNSName,UsePreviousValue=true \
+                           ParameterKey=AppImage,ParameterValue=shipit:${CIRCLE_SHA1:-$(git rev-parse HEAD)}
+                           ParameterKey=VPC,UsePreviousValue=true \
+                           ParameterKey=AppSubnets,UsePreviousValue=true \
+                           ParameterKey=LoadBalancerSubnets,UsePreviousValue=true\
+#      - run:
+#          name: Notify Shipit
+#          command: |
+#            curl https://shipit.ovotech.org.uk/deployments?apikey=$SHIPIT_API_KEY \
+#              -d "team=eng-services" \
+#              -d "service=shipit" \
+#              -d "buildId=$CIRCLE_BUILD_NUM" \
+#              -d "links[0].title=CircleCI build" \
+#              -d "links[0].url=$CIRCLE_BUILD_URL"
 
 workflows:
   version: 2
@@ -66,4 +84,4 @@ workflows:
           filters:
             branches:
               only:
-                - master
+                - migrate-accounts

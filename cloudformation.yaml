@@ -44,6 +44,37 @@ Resources:
 #        - HostedZoneId: !Ref Route53Zone
 #          DomainName: shipit.ovotech.org.uk
 
+  CIUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: shipit-ci
+      Policies:
+        - PolicyName: AllowDeployment
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecs:DeregisterTaskDefinition
+                  - ecs:RegisterTaskDefinition
+                  - ec2:DescribeSubnets
+                  - ec2:DescribeVpcs
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - ecs:UpdateService
+                  - ecs:DescribeServices
+                Resource: !Sub "arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:service/${ECSCluster}/${AppService.Name}"
+              - Effect: Allow
+                Action:
+                  - iam:GetRole
+                  - iam:PassRole
+                Resource:
+                  - !GetAtt ECSTaskRole.Arn
+                  - !GetAtt ECSTaskExecutionRole.Arn
+              - Effect: Allow
+                Action: cloudformation:UpdateStack
+                Resource: !Ref "AWS::StackId"
+
   ECRRepo:
     Type: AWS::ECR::Repository
     Properties:
