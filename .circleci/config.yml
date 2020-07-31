@@ -13,7 +13,7 @@ set_vars: &set_vars
     command: |
       echo 'export GIT_SHA1="${CIRCLE_SHA1:-$(git rev-parse HEAD)}"' >> $BASH_ENV
       echo 'export AWS_ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"' >> $BASH_ENV
-      echo 'export IMAGE_URL="${AWS_ACCOUNT_ID}.dkr.ecr.eu-west-1.amazonaws.com/shipit:$GIT_SHA1"' >> $BASH_ENV
+      echo 'export IMAGE_URL="${AWS_ACCOUNT_ID}.dkr.ecr.eu-west-1.amazonaws.com/shipit:${GIT_SHA1}"' >> $BASH_ENV
 jobs:
   build:
     working_directory: ~/shipit
@@ -44,7 +44,7 @@ jobs:
           name: Publish docker image if master branch
           command: |
             if [ "${CIRCLE_BRANCH}" == "migrate-accounts" -a "${CIRCLE_PROJECT_USERNAME}" == "ovotech" ]; then
-              eval "$(aws ecr get-login --no-include-email --region eu-west-1)"
+              `aws ecr get-login --no-include-email --region eu-west-1`
               docker tag shipit:1.0 $IMAGE_URL && docker push $IMAGE_URL
             else
               echo "Not publishing Docker image"
