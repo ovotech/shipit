@@ -59,6 +59,7 @@ Resources:
                   - ecr:InitiateLayerUpload
                   - ecr:CompleteLayerUpload
                   - ecr:BatchCheckLayerAvailability
+                  - ecr:DescribeRepositories
                 Resource: !GetAtt ECRRepo.Arn
               - Effect: Allow
                 Action:
@@ -216,15 +217,16 @@ Resources:
 
   AppService:
     Type: AWS::ECS::Service
+    DependsOn: ALBListener
     Properties:
       Cluster: !Ref ECSCluster
       DesiredCount: 1
       LaunchType: FARGATE
       TaskDefinition: !Ref AppTaskDefinition
-#      LoadBalancers:
-#        - ContainerName: shipit
-#          ContainerPort: 9000
-#          TargetGroupArn: !Ref ECSTargetGroup
+      LoadBalancers:
+        - ContainerName: shipit
+          ContainerPort: 9000
+          TargetGroupArn: !Ref ECSTargetGroup
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: DISABLED
@@ -247,12 +249,12 @@ Resources:
   LoadBalancerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: 'Open port 443 to the world'
+      GroupDescription: 'Open port 80 to 10.x.x.x'
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort: 443
-          ToPort: 443
-          CidrIp: 0.0.0.0/0
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 10.0.0.0/8
       SecurityGroupEgress:
         - IpProtocol: tcp
           FromPort: 9000
@@ -305,7 +307,7 @@ Resources:
           Value: !Ref AccessLogsBucket
         - Key: access_logs.s3.prefix
           Value: shipit
-      Scheme: internet-facing
+      Scheme: internal
       SecurityGroups:
         - Ref: LoadBalancerSecurityGroup
       Subnets:
@@ -327,17 +329,15 @@ Resources:
       VpcId:
         Ref: VPC
 
-#  ALBListener:
-#    Type: AWS::ElasticLoadBalancingV2::Listener
-#    Properties:
-#      DefaultActions:
-#      - Type: forward
-#        TargetGroupArn: !Ref ECSTargetGroup
-#      LoadBalancerArn: !Ref LoadBalancer
-#      Port: 443
-#      Protocol: HTTPS
-#      Certificates:
-#        - CertificateArn: !Ref LoadBalancerCertificate
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+      - Type: forward
+        TargetGroupArn: !Ref ECSTargetGroup
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 80
+      Protocol: HTTP
 
   ElasticsearchDomain:
     Type: AWS::Elasticsearch::Domain
