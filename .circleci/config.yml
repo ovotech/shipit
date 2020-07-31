@@ -21,9 +21,9 @@ jobs:
       - image: circleci/openjdk:11.0.5-jdk-stretch
     steps:
       - checkout
-      - *set_vars
       - setup_remote_docker
       - *new_aws_login
+      - *set_vars
       - run:
           name: Install AWS CLI
           command: scripts/ci/install-aws-cli.sh
@@ -56,8 +56,8 @@ jobs:
       - image: circleci/openjdk:11.0.5-jdk-stretch
     steps:
       - checkout
-      - *set_vars
       - *new_aws_login
+      - *set_vars
       - run:
           name: Install AWS CLI
           command: scripts/ci/install-aws-cli.sh
