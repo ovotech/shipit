@@ -39,7 +39,7 @@ class AppComponents(context: Context, config: Config)
     clientId = config.google.clientId,
     clientSecret = config.google.clientSecret.value,
     redirectUrl = config.google.redirectUrl,
-    domain = "ovoenergy.com",
+    domains = List("ovoenergy.com", "kaluza.com"),
     antiForgeryChecker = AntiForgeryChecker(
       InitialSecret(httpConfiguration.secret.secret),
       AntiForgeryChecker.signatureAlgorithmFromPlay(httpConfiguration)
