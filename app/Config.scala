@@ -16,7 +16,7 @@ case class ESConfig(
 object ESConfig {
 
   def load(param: Param): ConfigValue[ESConfig] = {
-    param("shipit.es.endpointUrl").map(endpointUrl => ESConfig.apply(endpointUrl = endpointUrl))
+    param("shipit.es.oldEndpointUrl").map(endpointUrl => ESConfig.apply(endpointUrl = endpointUrl))
   }
 
 }

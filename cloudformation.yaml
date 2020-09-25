@@ -17,6 +17,12 @@ Parameters:
   AppImage:
     Description: Docker image to deploy
     Type: String
+  OldElasticSearchDomainArn:
+    Description: Old ElasticSearch Domain to use
+    Type: String
+  OldElasticSearchDomainEndpoint:
+    Description: Old ElasticSearch Domain endpoint to use
+    Type: String
 
 Resources:
   Route53Zone:
@@ -161,6 +167,8 @@ Resources:
                 - es:ESHttpPut
                 - es:ESHttpDelete
               Resource:
+                - !Ref OldElasticSearchDomainArn
+                - !Sub "${OldElasticSearchDomainArn}/*"
                 - !GetAtt ElasticsearchDomain.DomainArn
                 - !Sub "${ElasticsearchDomain.DomainArn}/*"
         -
@@ -289,6 +297,13 @@ Resources:
             Resource: !GetAtt AccessLogsBucket.Arn
             Principal:
               Service: delivery.logs.amazonaws.com
+
+  ElasticsearchOldEndpointUrl:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: shipit.es.oldEndpointUrl
+      Value: !Ref OldElasticSearchDomainEndpoint
+      Type: String
 
   ElasticsearchEndpointUrl:
     Type: AWS::SSM::Parameter
