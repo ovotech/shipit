@@ -30,25 +30,25 @@ Resources:
     Properties:
       Name: shipit.ovotech.org.uk.
 
-  OldAppAlias:
-    Type: AWS::Route53::RecordSet
-    Properties:
-      Type: A
-      Name: shipit.ovotech.org.uk.
-      HostedZoneId: !Ref Route53Zone
-      AliasTarget:
-        DNSName: !Ref OldAppDNSName
-        EvaluateTargetHealth: true
-        HostedZoneId: Z32O12XQLNTSW2
-
-#  LoadBalancerCertificate:
-#    Type: AWS::CertificateManager::Certificate
+#  LoadBalancerAlias:
+#    Type: AWS::Route53::RecordSet
 #    Properties:
-#      DomainName: shipit.ovotech.org.uk
-#      ValidationMethod: DNS
-#      DomainValidationOptions:
-#        - HostedZoneId: !Ref Route53Zone
-#          DomainName: shipit.ovotech.org.uk
+#      Type: A
+#      Name: shipit.ovotech.org.uk.
+#      HostedZoneId: !Ref Route53Zone
+#      AliasTarget:
+#        HostedZoneId: !GetAtt LoadBalancer.CanonicalHostedZoneID
+#        DNSName: !GetAtt LoadBalancer.DNSName
+#        EvaluateTargetHealth: true
+
+  LoadBalancerCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: shipit.ovotech.org.uk
+      ValidationMethod: EMAIL
+      DomainValidationOptions:
+        - ValidationDomain: ovotech.org.uk
+          DomainName: shipit.ovotech.org.uk
 
   CIUser:
     Type: AWS::IAM::User
