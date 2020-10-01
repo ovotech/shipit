@@ -75,15 +75,15 @@ jobs:
                            ParameterKey=LoadBalancerSubnets,UsePreviousValue=true \
                            ParameterKey=OldElasticSearchDomainArn,UsePreviousValue=true \
                            ParameterKey=OldElasticSearchDomainEndpoint,UsePreviousValue=true
-#      - run:
-#          name: Notify Shipit
-#          command: |
-#            curl https://shipit.ovotech.org.uk/deployments?apikey=$SHIPIT_API_KEY \
-#              -d "team=eng-services" \
-#              -d "service=shipit" \
-#              -d "buildId=$CIRCLE_BUILD_NUM" \
-#              -d "links[0].title=CircleCI build" \
-#              -d "links[0].url=$CIRCLE_BUILD_URL"
+      - run:
+          name: Notify Shipit
+          command: |
+            curl https://shipit.ovotech.org.uk/deployments?apikey=$SHIPIT_API_KEY \
+              -d "team=eng-services" \
+              -d "service=shipit" \
+              -d "buildId=$CIRCLE_BUILD_NUM" \
+              -d "links[0].title=CircleCI build" \
+              -d "links[0].url=$CIRCLE_BUILD_URL"
 
 workflows:
   version: 2
