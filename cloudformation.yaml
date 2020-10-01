@@ -30,16 +30,16 @@ Resources:
     Properties:
       Name: shipit.ovotech.org.uk.
 
-#  LoadBalancerAlias:
-#    Type: AWS::Route53::RecordSet
-#    Properties:
-#      Type: A
-#      Name: shipit.ovotech.org.uk.
-#      HostedZoneId: !Ref Route53Zone
-#      AliasTarget:
-#        HostedZoneId: !GetAtt LoadBalancer.CanonicalHostedZoneID
-#        DNSName: !GetAtt LoadBalancer.DNSName
-#        EvaluateTargetHealth: true
+  LoadBalancerAlias:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      Type: A
+      Name: shipit.ovotech.org.uk.
+      HostedZoneId: !Ref Route53Zone
+      AliasTarget:
+        HostedZoneId: !GetAtt LoadBalancer.CanonicalHostedZoneID
+        DNSName: !GetAtt LoadBalancer.DNSName
+        EvaluateTargetHealth: true
 
   LoadBalancerCertificate:
     Type: AWS::CertificateManager::Certificate
@@ -257,12 +257,12 @@ Resources:
   LoadBalancerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: 'Open port 80 to 10.x.x.x'
+      GroupDescription: 'Open port 443 to the world'
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: 10.0.0.0/8
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
       SecurityGroupEgress:
         - IpProtocol: tcp
           FromPort: 9000
@@ -322,7 +322,7 @@ Resources:
           Value: !Ref AccessLogsBucket
         - Key: access_logs.s3.prefix
           Value: shipit
-      Scheme: internal
+      Scheme: internet-facing
       SecurityGroups:
         - Ref: LoadBalancerSecurityGroup
       Subnets:
@@ -351,8 +351,10 @@ Resources:
       - Type: forward
         TargetGroupArn: !Ref ECSTargetGroup
       LoadBalancerArn: !Ref LoadBalancer
-      Port: 80
-      Protocol: HTTP
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Ref LoadBalancerCertificate
 
   ElasticsearchDomain:
     Type: AWS::Elasticsearch::Domain
