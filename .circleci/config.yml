@@ -43,7 +43,7 @@ jobs:
       - run:
           name: Publish docker image if master branch
           command: |
-            if [ "${CIRCLE_BRANCH}" == "migrate-accounts" -a "${CIRCLE_PROJECT_USERNAME}" == "ovotech" ]; then
+            if [ "${CIRCLE_BRANCH}" == "master" -a "${CIRCLE_PROJECT_USERNAME}" == "ovotech" ]; then
               `aws ecr get-login --no-include-email --region eu-west-1`
               docker tag shipit:1.0 $IMAGE_URL && docker push $IMAGE_URL
             else
@@ -96,4 +96,4 @@ workflows:
           filters:
             branches:
               only:
-                - migrate-accounts
+                - master
