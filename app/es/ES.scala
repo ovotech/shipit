@@ -358,7 +358,7 @@ object ES {
            |      "createdAt" : { "type" : "date" },
            |      "createdBy" : { "type" : "keyword" },
            |      "active" : { "type" : "boolean" },
-           |      "lastUsed" : { "type" : "date" },
+           |      "lastUsed" : { "type" : "date" }
            |    }
            |  },
            |  "${Types.Deployment}": {
