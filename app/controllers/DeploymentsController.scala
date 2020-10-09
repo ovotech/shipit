@@ -3,7 +3,7 @@ package controllers
 import java.time.OffsetDateTime
 
 import com.gu.googleauth.{AuthAction, GoogleAuthConfig, UserIdentity}
-import es.ES
+import elasticsearch.Elastic55
 import logic.Deployments
 import models.Link
 import play.api.data.Form
@@ -40,7 +40,7 @@ class DeploymentsController(
       val showAdminColumn             = ctx.isAdmin(user)
       val (teamQuery, serviceQuery, buildIdQuery) =
         (team.filter(_.nonEmpty), service.filter(_.nonEmpty), buildId.filter(_.nonEmpty))
-      val searchResult = ES.Deployments.search(teamQuery, serviceQuery, buildIdQuery, page).run(jestClient)
+      val searchResult = Elastic55.Deployments.search(teamQuery, serviceQuery, buildIdQuery, page).run(jestClient)
       Ok(views.html.deployments.search(searchResult, teamQuery, serviceQuery, buildIdQuery, showAdminColumn))
   }
 
@@ -77,7 +77,7 @@ class DeploymentsController(
   def delete(id: String) = authAction { request =>
     implicit val user: UserIdentity = request.user
     if (ctx.isAdmin(user)) {
-      ES.Deployments.delete(id).run(ctx.jestClient) match {
+      Elastic55.Deployments.delete(id).run(ctx.jestClient) match {
         case Left(errorMessage) => Ok(s"Failed to delete $id. Error message: $errorMessage")
         case Right(_)           => Ok(s"Deleted $id")
       }

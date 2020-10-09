@@ -1,5 +1,6 @@
 @import java.time.OffsetDateTime
-@(page: es.ES.Page[ApiKey])(implicit user: com.gu.googleauth.UserIdentity, request: RequestHeader, flash: Flash)
+@import views.html.apikeys.ApiKey
+@(page: elasticsearch.Elastic55.Page[ApiKey])(implicit user: com.gu.googleauth.UserIdentity, request: RequestHeader, flash: Flash)
 
 @import views.ViewHelper._
 @import helper._

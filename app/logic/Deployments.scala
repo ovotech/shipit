@@ -9,7 +9,7 @@ import cats.syntax.option._
 import cats.instances.future._
 import com.gu.googleauth.UserIdentity
 import datadog.Datadog
-import es.ES
+import elasticsearch.Elastic55
 import io.searchbox.client.JestClient
 import models._
 import org.slf4j.LoggerFactory
@@ -61,7 +61,7 @@ object Deployments {
   }
 
   private def persistToES(deployment: Deployment): Kleisli[Future, Context, Identified[Deployment]] =
-    ES.Deployments
+    Elastic55.Deployments
       .create(deployment)
       .local[Context](_.jestClient)
       .mapK(FunctionK.lift[Id, Future](Future.successful))

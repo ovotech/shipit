@@ -1,6 +1,6 @@
 package controllers
 
-import es.ES
+import elasticsearch.Elastic55
 import io.searchbox.client.JestClient
 import play.api.mvc._
 
@@ -15,10 +15,10 @@ class ApiKeyAuth(jestClient: JestClient, actionBuilder: DefaultActionBuilder)(im
     override protected def filter[A](request: Request[A]): Future[Option[Result]] = Future {
       request.getQueryString("apikey") match {
         case Some(key) =>
-          ES.ApiKeys.findByKey(key).run(jestClient) match {
+          Elastic55.ApiKeys.findByKey(key).run(jestClient) match {
             case Some(apiKey) if apiKey.active =>
               // OK, update last-used timestamp for API key and allow request to proceed
-              ES.ApiKeys.updateLastUsed(apiKey.id).run(jestClient)
+              Elastic55.ApiKeys.updateLastUsed(apiKey.id).run(jestClient)
               None
             case _ =>
               Some(Unauthorized("Invalid API key"))

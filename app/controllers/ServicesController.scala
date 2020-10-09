@@ -1,7 +1,7 @@
 package controllers
 
 import com.gu.googleauth.{AuthAction, GoogleAuthConfig, UserIdentity}
-import es.ES
+import elasticsearch.Elastic55
 import io.searchbox.client.JestClient
 import play.api.libs.ws.WSClient
 import play.api.mvc._
@@ -19,7 +19,7 @@ class ServicesController(
 
   def list(days: Int) = authAction { request =>
     implicit val user: UserIdentity = request.user
-    val services                    = ES.Deployments.listServices(deployedInLastNDays = days).run(jestClient)
+    val services                    = Elastic55.Deployments.listServices(deployedInLastNDays = days).run(jestClient)
     Ok(views.html.services.list(services, days))
   }
 

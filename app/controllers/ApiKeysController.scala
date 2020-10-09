@@ -3,7 +3,7 @@ package controllers
 import java.util.UUID
 
 import com.gu.googleauth.{AuthAction, GoogleAuthConfig, UserIdentity}
-import es.ES
+import elasticsearch.Elastic55
 import io.searchbox.client.JestClient
 import play.api.libs.ws.WSClient
 import play.api.mvc._
@@ -21,7 +21,7 @@ class ApiKeysController(
 
   def list(page: Int) = authAction { implicit request =>
     implicit val user: UserIdentity = request.user
-    val keys                        = ES.ApiKeys.list(page).run(jestClient)
+    val keys                        = Elastic55.ApiKeys.list(page).run(jestClient)
     Ok(views.html.apikeys.list(keys))
   }
 
@@ -30,7 +30,7 @@ class ApiKeysController(
     CreateKeyForm.bindFromRequest.fold(
       _ => Redirect(routes.ApiKeysController.list()).flashing("error" -> "Invalid request"),
       data => {
-        val apiKey = ES.ApiKeys
+        val apiKey = Elastic55.ApiKeys
           .create(
             key = UUID.randomUUID().toString,
             description = data.description,
@@ -44,19 +44,19 @@ class ApiKeysController(
 
   def disable(keyId: String) = authAction { request =>
     implicit val user: UserIdentity = request.user
-    ES.ApiKeys.disable(keyId).run(jestClient)
+    Elastic55.ApiKeys.disable(keyId).run(jestClient)
     Redirect(routes.ApiKeysController.list()).flashing("info" -> "Disabled API key")
   }
 
   def enable(keyId: String) = authAction { request =>
     implicit val user: UserIdentity = request.user
-    ES.ApiKeys.enable(keyId).run(jestClient)
+    Elastic55.ApiKeys.enable(keyId).run(jestClient)
     Redirect(routes.ApiKeysController.list()).flashing("info" -> "Enabled API key")
   }
 
   def delete(keyId: String) = authAction { request =>
     implicit val user: UserIdentity = request.user
-    val succeeded                   = ES.ApiKeys.delete(keyId).run(jestClient)
+    val succeeded                   = Elastic55.ApiKeys.delete(keyId).run(jestClient)
     if (succeeded)
       Redirect(routes.ApiKeysController.list()).flashing("info" -> "Deleted API key")
     else

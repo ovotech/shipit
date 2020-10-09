@@ -1,4 +1,4 @@
-import es.ES
+import elasticsearch.Elastic55
 import play.api.libs.logback.LogbackLoggerConfigurator
 import play.api.{Application, ApplicationLoader}
 import play.api.ApplicationLoader.Context
@@ -21,7 +21,7 @@ class AppLoader extends ApplicationLoader {
 
     val components = new AppComponents(context, config)
 
-    ES.initIndex.run(components.jestClient)
+    Elastic55.initIndex.run(components.jestClient)
 
     components.application
   }

@@ -1,4 +1,4 @@
-package models
+package apikeys
 
 import java.time.OffsetDateTime
 

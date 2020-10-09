@@ -1,6 +1,6 @@
-package es
+package elasticsearch
 
-import es.ES.Page
+import elasticsearch.Elastic55.Page
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 

@@ -7,8 +7,10 @@ scalacOptions += "-Ypartial-unification"
 version := "1.0"
 
 resolvers += Resolver.bintrayRepo("ovotech", "maven")
+val elastic4sVersion = "7.8.1"
 val circeVersion = "0.12.3"
 val cirisVersion = "1.0.4"
+
 libraryDependencies ++= Seq(
   ws,
   filters,
@@ -25,7 +27,10 @@ libraryDependencies ++= Seq(
   "com.ovoenergy"                 %% "ciris-aws-ssm"                  % "1.0.0",
   "org.scalatest"                 %% "scalatest"                      % "3.1.0" % Test,
   "com.github.alexarchambault"    %% "scalacheck-shapeless_1.14"      % "1.2.3" % Test,
-  "org.scalacheck"                %% "scalacheck"                     % "1.14.2" % Test
+  "org.scalacheck"                %% "scalacheck"                     % "1.14.2" % Test,
+  "com.sksamuel.elastic4s"          %% "elastic4s-client-esjava"      % elastic4sVersion,
+  "com.sksamuel.elastic4s"          %% "elastic4s-effect-cats"        % elastic4sVersion,
+  "com.sksamuel.elastic4s"          %% "elastic4s-json-circe"         % elastic4sVersion
 )
 
 enablePlugins(PlayScala, DockerPlugin)
