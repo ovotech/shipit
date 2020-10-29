@@ -1,5 +1,7 @@
 package deployments
 
+import java.time.OffsetDateTime
+
 import cats.data.NonEmptyList
 import cats.effect.Sync
 import cats.instances.list._
@@ -11,14 +13,15 @@ import cats.tagless.FunctorK
 import com.sksamuel.elastic4s.ElasticDsl.{createIndex, properties, _}
 import com.sksamuel.elastic4s.cats.effect.instances._
 import com.sksamuel.elastic4s.circe._
-import com.sksamuel.elastic4s.fields.{KeywordField, NestedField}
+import com.sksamuel.elastic4s.fields.{DateField, KeywordField, NestedField}
 import com.sksamuel.elastic4s.requests.indexes.CreateIndexRequest
 import com.sksamuel.elastic4s.requests.searches.SearchRequest
 import com.sksamuel.elastic4s.requests.searches.queries.matches.MatchQuery
 import com.sksamuel.elastic4s.{ElasticClient, Executor}
+import elasticsearch.Agg.{bucket, max}
 import elasticsearch.CirceCodecs._
-import elasticsearch.Pagination._
 import elasticsearch.Instances._
+import elasticsearch.Pagination._
 import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
 import io.circe.{Decoder, Encoder}
 import models.{Identified, Service}
@@ -69,7 +72,7 @@ object Deployments {
           KeywordField("team"),
           KeywordField("service"),
           KeywordField("buildId"),
-          KeywordField("timestamp"),
+          DateField("timestamp"),
           KeywordField("note"),
           NestedField(
             name = "links",
@@ -80,6 +83,14 @@ object Deployments {
           )
         )
       )
+
+  implicit val decodeServices: Decoder[List[Service]] =
+    bucket("by_team")(bucket("by_service")(max[OffsetDateTime]("last_deployment"))).map { teams =>
+      for {
+        team    <- teams
+        service <- team.subAgg
+      } yield Service(team.key, service.key, service.subAgg.value)
+    }
 
   def apply[F[_]: Executor](client: ElasticClient)(implicit F: Sync[F]): Deployments[F] =
     new Deployments[F] {
@@ -104,8 +115,8 @@ object Deployments {
       def recent(deployedInLastNDays: Int): F[Seq[Service]] =
         for {
           response <- client.execute(recentQuery(deployedInLastNDays))
-          _ = println(response.result.aggs)
-        } yield Seq.empty
+          aggs     <- F.fromTry(response.result.aggs.safeTo[List[Service]])
+        } yield aggs
 
       def delete(id: String): F[Either[String, Unit]] =
         client.execute(deleteById(indexName, id)).map(_.toEither.bimap(_.reason, _ => ()))
