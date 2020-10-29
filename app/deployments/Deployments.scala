@@ -1,191 +1,113 @@
 package deployments
 
-import java.time.{Instant, OffsetDateTime, ZoneOffset}
-
-import cats.effect.{ContextShift, IO}
+import cats.data.NonEmptyList
+import cats.effect.Sync
+import cats.instances.list._
 import cats.syntax.either._
 import cats.syntax.flatMap._
-import com.google.gson.JsonElement
-import elasticsearch.Elastic55._
-import io.circe.Decoder
-import io.circe.generic.semiauto.deriveDecoder
-import io.circe.parser.decode
-import io.searchbox.client.JestClient
-import io.searchbox.core.search.sort.Sort
-import io.searchbox.core.search.sort.Sort.Sorting
-import io.searchbox.core.{Delete, Index, Search}
+import cats.syntax.functor._
+import cats.syntax.traverse._
+import cats.tagless.FunctorK
+import com.sksamuel.elastic4s.ElasticDsl.{createIndex, properties, _}
+import com.sksamuel.elastic4s.cats.effect.instances._
+import com.sksamuel.elastic4s.circe._
+import com.sksamuel.elastic4s.fields.{KeywordField, NestedField}
+import com.sksamuel.elastic4s.requests.indexes.CreateIndexRequest
+import com.sksamuel.elastic4s.requests.searches.SearchRequest
+import com.sksamuel.elastic4s.requests.searches.queries.matches.MatchQuery
+import com.sksamuel.elastic4s.{ElasticClient, Executor}
+import elasticsearch.CirceCodecs._
+import elasticsearch.Pagination._
+import elasticsearch.Instances._
+import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
+import io.circe.{Decoder, Encoder}
 import models.{Identified, Service}
-import org.slf4j.{Logger, LoggerFactory}
-
-import scala.collection.JavaConverters._
 
 trait Deployments[F[_]] {
   def create(deployment: Deployment): F[Identified[Deployment]]
   def search(terms: SearchTerms, page: Int): F[Page[Identified[Deployment]]]
   def recent(deployedInLastNDays: Int): F[Seq[Service]]
   def delete(id: String): F[Either[String, Unit]]
+  def createIndex: F[Unit]
 }
 
 object Deployments {
 
-  def old(jest: JestClient)(implicit cs: ContextShift[IO]): Deployments[IO] =
-    new Deployments[IO] {
+  val indexName: String                  = "shipit_v3_deployments"
+  implicit val fk: FunctorK[Deployments] = cats.tagless.Derive.functorK
 
-      val logger: Logger =
-        LoggerFactory.getLogger("shipit.deployments.Deployments.old")
+  private def searchFilters(terms: SearchTerms): Option[NonEmptyList[MatchQuery]] =
+    NonEmptyList.fromList(
+      terms.buildId.map(b => matchQuery("buildId", b)).toList ++
+        terms.service.map(b => matchQuery("service", b)).toList ++
+        terms.team.map(b => matchQuery("team", b)).toList
+    )
 
-      implicit val decoder: Decoder[Deployment] =
-        deriveDecoder[Deployment]
+  private def searchQuery(terms: SearchTerms, page: Int): SearchRequest = {
+    val basicQuery = search(indexName).from(pageToOffset(page)).limit(PageSize).matchAllQuery()
+    searchFilters(terms).fold(basicQuery)(f => basicQuery.postFilter(must(f.head, f.tail: _*)))
+  }
 
-      def _create(deployment: Deployment): IO[Identified[Deployment]] = {
-        val linksList = deployment.links.map { link =>
-          Map(
-            "title" -> link.title,
-            "url"   -> link.url
-          ).asJava
-        }.asJava
-        val map = Map(
-          "team"      -> deployment.team,
-          "service"   -> deployment.service,
-          "buildId"   -> deployment.buildId,
-          "timestamp" -> deployment.timestamp.toString,
-          "links"     -> linksList
-        ) ++
-          deployment.note.map("note" -> _)
+  private def recentQuery(deployedInLastNDays: Int): SearchRequest =
+    search(indexName)
+      .query(rangeQuery("timestamp").gte(s"now-${deployedInLastNDays}d/d"))
+      .size(0)
+      .aggs(
+        termsAgg("by_team", "team")
+          .size(500)
+          .addSubagg(
+            termsAgg("by_service", "service")
+              .size(500)
+              .addSubagg(maxAgg("last_deployment", "timestamp"))
+          )
+      )
 
-        val action = new Index.Builder(map.asJava)
-          .index(IndexName)
-          .`type`(Types.Deployment)
-          .build()
+  private val createDeployments: CreateIndexRequest =
+    createIndex(indexName)
+      .mapping(
+        properties(
+          KeywordField("team"),
+          KeywordField("service"),
+          KeywordField("buildId"),
+          KeywordField("timestamp"),
+          KeywordField("note"),
+          NestedField(
+            name = "links",
+            properties = List(
+              KeywordField("title"),
+              KeywordField("url")
+            )
+          )
+        )
+      )
 
-        jest.execIO(action).map(r => Identified(r.getId, deployment))
-      }
+  def apply[F[_]: Executor](client: ElasticClient)(implicit F: Sync[F]): Deployments[F] =
+    new Deployments[F] {
 
-      def _delete(id: String): IO[Either[String, Unit]] = {
-        val action = new Delete.Builder(id)
-          .index(IndexName)
-          .`type`(Types.Deployment)
-          .build()
-        jest.execIO(action).map { result =>
-          if (result.isSucceeded)
-            Right(())
-          else
-            Left(result.getErrorMessage)
-        }
-      }
+      implicit val linkEnc: Encoder[Link]      = deriveEncoder
+      implicit val linkDec: Decoder[Link]      = deriveDecoder
+      implicit val depEnc: Encoder[Deployment] = deriveEncoder[Deployment]
+      implicit val depDec: Decoder[Deployment] = deriveDecoder[Deployment]
 
-      def parseHit(jsonElement: JsonElement, id: String): Option[Identified[Deployment]] =
-        decode[Deployment](jsonElement.toString)
-          .leftMap(e => logger.warn("Failed to decode deployment returned by ES", e))
-          .map(value => Identified(id, value))
-          .toOption
+      def createIndex: F[Unit] =
+        client.execute(createDeployments).void
 
-      def create(deployment: Deployment): IO[Identified[Deployment]] =
-        _create(deployment).flatTap(_ => jest.refresh)
+      def create(dep: Deployment): F[Identified[Deployment]] =
+        client.execute(indexInto(indexName).source(dep)).map(r => Identified(r.result.id, dep))
 
-      def search(terms: SearchTerms, page: Int): IO[Page[Identified[Deployment]]] = {
-        val filters = Seq(
-          terms.team.map(x => s"""{ "match": { "team": "$x" } }"""),
-          terms.service.map(x => s"""{ "match": { "service": "$x" } }"""),
-          terms.buildId.map(x => s"""{ "match": { "buildId": "$x" } }""")
-        ).flatten
-        val query =
-          s"""{
-             |  "from": ${pageToOffset(page)},
-             |  "size": $PageSize,
-             |  "query": {
-             |    "bool": {
-             |      "must": { "match_all": {} },
-             |      "filter": {
-             |        "bool": {
-             |          "must": [
-             |            ${filters.mkString(", ")}
+      def search(terms: SearchTerms, page: Int): F[Page[Identified[Deployment]]] =
+        for {
+          response <- client.execute(searchQuery(terms, page))
+          data     <- response.result.safeTo[Identified[Deployment]].toList.traverse(F.fromTry)
+        } yield Page(data, page, response.result.totalHits.toInt)
 
-             |}""".
-            stripMargin
+      def recent(deployedInLastNDays: Int): F[Seq[Service]] =
+        for {
+          response <- client.execute(recentQuery(deployedInLastNDays))
+          _ = println(response.result.aggs)
+        } yield Seq.empty
 
-        val action = new Search.Builder(query)
-          .addIndex(IndexName)
-          .addType(Types.Deployment)
-          .addSort(new Sort ( "timestamp", Sorting.DESC))
-          .build()
-
-        jest.execIO(action).map { result =>
-          val items =
-            result
-              .getHits(classOf[JsonElement])
-              .asScala
-              .flatMap(hit => parseHit(hit.source, hit.id))
-          Page(items, page, result.getTotal.toInt)
-        }
-      }
-
-      def recent(deployedInLastNDays: Int): IO[Seq[Service]] = {
-        val query =
-          s"""
-             |{
-             |  "query": {
-             |    "range": {
-             |      "timestamp": {
-             |        "gte" : "now-${deployedInLastNDays}d/d"
-             |      }
-             |    }
-             |  },
-             |  "size": 0,
-             |  "aggs": {
-             |    "by_team": {
-             |      "terms": {
-             |        "field": "team",
-             |        "size": 500
-             |      },
-             |      "aggs": {
-             |        "by_service": {
-             |          "terms": {
-             |            "field": "service",
-             |            "size": 500
-             |          },
-             |          "aggs": {
-             |            "last_deployment": {
-             |              "max": {
-             |                "field": "timestamp"
-             |              }
-             |            }
-             |          }
-             |        }
-             |      }
-             |    }
-             |  }
-             |}
-        """.stripMargin
-
-        val action = new Search.Builder(query)
-          .addIndex(IndexName)
-          .addType(Types.Deployment)
-          .build()
-
-        jest.execIO(action).map { result =>
-
-          val teamBuckets = result.getAggregations.getTermsAggregation("by_team").getBuckets.asScala
-
-          val services = for {
-            team <- teamBuckets
-            services = team.getTermsAggregation("by_service").getBuckets.asScala
-            service <- services
-          } yield {
-            val lastDeploymentEpochMillis = service.getMaxAggregation("last_deployment").getMax.toLong
-            val lastDeployment = OffsetDateTime.ofInstant(Instant.ofEpochMilli(lastDeploymentEpochMillis), ZoneOffset.UTC)
-            Service(team.getKey, service.getKey, lastDeployment)
-          }
-
-          services.sortBy(_.team)
-        }
-      }
-
-      def delete(id: String): IO[Either[String, Unit]] = {
-        _delete(id).flatTap(_ => jest.refresh)
-      }
+      def delete(id: String): F[Either[String, Unit]] =
+        client.execute(deleteById(indexName, id)).map(_.toEither.bimap(_.reason, _ => ()))
     }
-
 }
-
-

@@ -1,6 +1,6 @@
 package elasticsearch
 
-import elasticsearch.Elastic55.Page
+import elasticsearch.Pagination.Page
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 

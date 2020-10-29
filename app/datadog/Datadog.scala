@@ -1,9 +1,9 @@
 package datadog
 
 import cats.data.Kleisli
-import models.Deployment
-import play.api.libs.json.Json.{arr, obj}
+import deployments.Deployment
 import play.api.libs.json.JsValue
+import play.api.libs.json.Json.{arr, obj}
 import play.api.libs.ws.{WSClient, WSResponse}
 
 import scala.concurrent.Future

@@ -2,15 +2,12 @@ package logic
 
 import java.time.OffsetDateTime
 
-import cats.Id
-import cats.arrow.FunctionK
 import cats.data.Kleisli
-import cats.syntax.option._
 import cats.instances.future._
+import cats.syntax.option._
 import com.gu.googleauth.UserIdentity
 import datadog.Datadog
-import elasticsearch.Elastic55
-import io.searchbox.client.JestClient
+import deployments.{Deployment, Deployments => Depls, Link}
 import models._
 import org.slf4j.LoggerFactory
 import play.api.libs.ws.WSResponse
@@ -24,9 +21,9 @@ object Deployments {
   private val logger = LoggerFactory.getLogger(getClass)
 
   case class Context(
-      jestClient: JestClient,
       slackCtx: Slack.Context,
       datadogCtx: Datadog.Context,
+      deployments: Depls[Future],
       isAdmin: UserIdentity => Boolean
   )
 
@@ -40,7 +37,7 @@ object Deployments {
       notifySlackChannel: Option[String]
   ): Kleisli[Future, Context, Deployment] = {
 
-    val deployment = Deployment(team, service, buildId, timestamp, links, note)
+    val deployment = Deployment(team, service, buildId, timestamp, links.toList, note)
 
     for {
       _               <- persistToES(deployment)
@@ -61,10 +58,7 @@ object Deployments {
   }
 
   private def persistToES(deployment: Deployment): Kleisli[Future, Context, Identified[Deployment]] =
-    Elastic55.Deployments
-      .create(deployment)
-      .local[Context](_.jestClient)
-      .mapK(FunctionK.lift[Id, Future](Future.successful))
+    Kleisli(ctx => ctx.deployments.create(deployment))
 
   private def sendMainSlackNotification(deployment: Deployment): Kleisli[Future, Context, WSResponse] =
     Slack.sendNotification(deployment, channel = None).local[Context](_.slackCtx)
@@ -81,5 +75,4 @@ object Deployments {
 
   private def sendEventToDatadog(deployment: Deployment): Kleisli[Future, Context, WSResponse] =
     Datadog.sendEvent(deployment).local[Context](_.datadogCtx)
-
 }

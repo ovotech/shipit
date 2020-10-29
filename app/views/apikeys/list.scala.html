@@ -1,6 +1,6 @@
 @import java.time.OffsetDateTime
-@import views.html.apikeys.ApiKey
-@(page: elasticsearch.Elastic55.Page[ApiKey])(implicit user: com.gu.googleauth.UserIdentity, request: RequestHeader, flash: Flash)
+@import _root_.apikeys.ExistingApiKey
+@(page: elasticsearch.Pagination.Page[Identified[ExistingApiKey]])(implicit user: com.gu.googleauth.UserIdentity, request: RequestHeader, flash: Flash)
 
 @import views.ViewHelper._
 @import helper._
@@ -30,16 +30,16 @@
     <tbody>
       @for(item <- page.items) {
         <tr>
-          <td>@item.key</td>
-          <td>@item.createdBy</td>
-          <td>@statusBadge(item)</td>
-          <td>@item.lastUsed.fold[Html](Html("(unknown)")){timestamp: OffsetDateTime => <time class="timeago" datetime="@timestamp.toString">@formatDate(timestamp)</time>}</td>
-          <td>@item.description</td>
+          <td>@item.value.key</td>
+          <td>@item.value.createdBy</td>
+          <td>@statusBadge(item.value)</td>
+          <td>@item.value.lastUsed.fold[Html](Html("(unknown)")){timestamp: OffsetDateTime => <time class="timeago" datetime="@timestamp.toString">@formatDate(timestamp)</time>}</td>
+          <td>@item.value.description</td>
           <td>
             <form id="disable_@item.id" method="post" action="@routes.ApiKeysController.disable(item.id)">@CSRF.formField</form>
             <form id="enable_@item.id" method="post" action="@routes.ApiKeysController.enable(item.id)">@CSRF.formField</form>
             <form id="delete_@item.id" method="post" action="@routes.ApiKeysController.delete(item.id)">@CSRF.formField</form>
-            @if(item.active) {
+            @if(item.value.active) {
               <button form="disable_@item.id" class="btn btn-warning btn-sm">Disable</button>
             } else {
               <button form="enable_@item.id" class="btn btn-primary btn-sm">Enable</button>

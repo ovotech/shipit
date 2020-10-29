@@ -28,9 +28,10 @@ libraryDependencies ++= Seq(
   "org.scalatest"                 %% "scalatest"                      % "3.1.0" % Test,
   "com.github.alexarchambault"    %% "scalacheck-shapeless_1.14"      % "1.2.3" % Test,
   "org.scalacheck"                %% "scalacheck"                     % "1.14.2" % Test,
-  "com.sksamuel.elastic4s"          %% "elastic4s-client-esjava"      % elastic4sVersion,
-  "com.sksamuel.elastic4s"          %% "elastic4s-effect-cats"        % elastic4sVersion,
-  "com.sksamuel.elastic4s"          %% "elastic4s-json-circe"         % elastic4sVersion
+  "com.sksamuel.elastic4s"        %% "elastic4s-client-esjava"        % elastic4sVersion,
+  "com.sksamuel.elastic4s"        %% "elastic4s-effect-cats"          % elastic4sVersion,
+  "com.sksamuel.elastic4s"        %% "elastic4s-json-circe"           % elastic4sVersion,
+  "org.typelevel"                 %% "cats-tagless-macros"            % "0.12"
 )
 
 enablePlugins(PlayScala, DockerPlugin)

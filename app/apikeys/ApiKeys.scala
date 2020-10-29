@@ -1,168 +1,103 @@
 package apikeys
 
-import java.time.OffsetDateTime
+import java.time.ZoneOffset.UTC
+import java.time.{Instant, OffsetDateTime}
+import java.util.concurrent.TimeUnit.MILLISECONDS
 
-import cats.Id
-import cats.data.Reader
-import cats.effect.{ContextShift, IO}
-import cats.syntax.either._
-import com.google.gson.JsonElement
-import elasticsearch.Elastic55._
-import io.circe.Decoder
-import io.circe.generic.semiauto.deriveDecoder
-import io.circe.parser.parse
-import io.searchbox.client.JestClient
-import io.searchbox.core.search.sort.Sort
-import io.searchbox.core.{Delete, Index, Search, Update}
-import org.slf4j.{Logger, LoggerFactory}
-
-import scala.collection.JavaConverters._
+import cats.effect.{Clock, Sync}
+import cats.instances.list._
+import cats.syntax.flatMap._
+import cats.syntax.functor._
+import cats.syntax.traverse._
+import cats.tagless.FunctorK
+import com.sksamuel.elastic4s.ElasticDsl.{createIndex, _}
+import com.sksamuel.elastic4s.cats.effect.instances._
+import com.sksamuel.elastic4s.circe._
+import com.sksamuel.elastic4s.fields.{BooleanField, DateField, KeywordField, TextField}
+import com.sksamuel.elastic4s.requests.indexes.CreateIndexRequest
+import com.sksamuel.elastic4s.requests.searches.SearchRequest
+import com.sksamuel.elastic4s.{ElasticClient, Executor}
+import elasticsearch.Pagination._
+import elasticsearch.Instances._
+import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
+import io.circe.{Decoder, Encoder}
+import models.Identified
 
 trait ApiKeys[F[_]] {
-  def create(key: String, description: Option[String], createdBy: String): F[ApiKey]
-  def findByKey(key: String): F[Option[ApiKey]]
-  def list(page: Int): F[Page[ApiKey]]
+  def create(key: NewApiKey): F[Identified[ExistingApiKey]]
+  def findByKey(key: String): F[Option[Identified[ExistingApiKey]]]
+  def list(page: Int): F[Page[Identified[ExistingApiKey]]]
   def updateLastUsed(keyId: String): F[Unit]
   def disable(keyId: String): F[Unit]
   def enable(keyId: String): F[Unit]
   def delete(keyId: String): F[Boolean]
+  def createIndex: F[Unit]
 }
 
 object ApiKeys {
 
-  def old(jest: JestClient)(implicit cs: ContextShift[IO]): ApiKeys[IO] =
-    new ApiKeys[IO] {
+  val indexName: String              = "shipit_v3_apikeys"
+  implicit val fk: FunctorK[ApiKeys] = cats.tagless.Derive.functorK
 
-      val logger: Logger =
-        LoggerFactory.getLogger("shipit.apikeys.ApiKeys.old")
+  private def byKeyQuery(key: String): SearchRequest =
+    search(indexName).query(termQuery("key", key)).size(1)
 
-      implicit val decoder: Decoder[String => ApiKey] =
-        deriveDecoder[String => ApiKey] // no idea how this magically fills in the id field
+  private def listQuery(page: Int): SearchRequest =
+    search(indexName).matchAllQuery().from(pageToOffset(page)).limit(PageSize).sortByFieldAsc("createdBy")
 
-      def _create(key: String, description: Option[String], createdBy: String): IO[ApiKey] = {
-        val createdAt = OffsetDateTime.now()
-        val map = Map(
-          "key"                            -> key,
-          "createdBy"                      -> createdBy,
-          "createdAt"                      -> createdAt.toString,
-          "active"                         -> true
-        ) ++ description.map("description" -> _)
-        val action = new Index.Builder(map.asJava)
-          .index(IndexName)
-          .`type`(Types.ApiKey)
-          .build()
-        jest.execIO(action).map { r =>
-          ApiKey(r.getId, key, description, createdAt, createdBy, active = true, lastUsed = None)
-        }
-      }
+  private val createApiKeys: CreateIndexRequest =
+    createIndex(indexName)
+      .mapping(
+        properties(
+          KeywordField("key"),
+          TextField("description"),
+          DateField("createdAt"),
+          KeywordField("createdBy"),
+          BooleanField("active"),
+          DateField("lastUsed")
+        )
+      )
 
-      private def _delete(keyId: String): Reader[JestClient, Boolean] =
-        Reader[JestClient, Boolean] { jest =>
-          val action = new Delete.Builder(keyId)
-            .index(IndexName)
-            .`type`(Types.ApiKey)
-            .build()
-          val result = jest.execute(action)
-          if (!result.isSucceeded) {
-            logger.warn(s"Failed to delete API key. Error: ${result.getErrorMessage}")
-          }
-          result.isSucceeded
-        }
+  def apply[F[_]: Executor: Clock](client: ElasticClient)(implicit F: Sync[F]): ApiKeys[F] =
+    new ApiKeys[F] {
 
-      def updateActiveFlag(keyId: String, active: Boolean): Reader[JestClient, Unit] =
-        Reader[JestClient, Unit] { jest =>
-          val update =
-            s"""
-               |{
-               |   "doc" : {
-               |      "active": $active
-               |   }
-               |}
-         """.stripMargin
-          val action = new Update.Builder(update)
-            .index(IndexName)
-            .`type`(Types.ApiKey)
-            .id(keyId)
-            .build()
-          jest.execute(action)
+      implicit val encoder: Encoder[ExistingApiKey] = deriveEncoder
+      implicit val decoder: Decoder[ExistingApiKey] = deriveDecoder
+
+      def createIndex: F[Unit] =
+        client.execute(createApiKeys).void
+
+      def create(key: NewApiKey): F[Identified[ExistingApiKey]] =
+        for {
+          existing <- ExistingApiKey.fromNew[F](key)
+          response <- client.execute(indexInto(indexName).source(existing))
+        } yield Identified(id = response.result.id, existing)
+
+      def findByKey(key: String): F[Option[Identified[ExistingApiKey]]] =
+        for {
+          response <- client.execute(byKeyQuery(key))
+          data     <- response.result.safeTo[Identified[ExistingApiKey]].toList.traverse(F.fromTry)
+        } yield data.headOption
+
+      def list(page: Int): F[Page[Identified[ExistingApiKey]]] =
+        for {
+          response <- client.execute(listQuery(page))
+          data     <- response.result.safeTo[Identified[ExistingApiKey]].toList.traverse(F.fromTry)
+        } yield Page(data, page, response.result.totalHits.toInt)
+
+      def updateLastUsed(keyId: String): F[Unit] =
+        Clock[F].realTime(MILLISECONDS).map(Instant.ofEpochMilli).flatMap { i =>
+          val update = updateById(indexName, keyId).doc("lastUsed" -> OffsetDateTime.ofInstant(i, UTC))
+          client.execute(update).void
         }
 
-      def create(key: String, description: Option[String], createdBy: String): Id[ApiKey] =
-        executeAndRefresh(_create(key, description, createdBy)).run(jest)
+      def disable(keyId: String): F[Unit] =
+        client.execute(updateById(indexName, keyId).doc("active" -> false)).void
 
-      def parseHit(jsonElement: JsonElement, id: String): Option[ApiKey] = {
-        val either = for {
-          json       <- parse(jsonElement.toString).right
-          incomplete <- json.as[String => ApiKey].right
-        } yield incomplete.apply(id)
-        either
-          .leftMap(e => logger.warn("Failed to decode API key returned by ES", e))
-          .toOption
-      }
-      def findByKey(key: String): Option[ApiKey] = {
-        val query =
-          s"""{
-             |  "size": 1,
-             |  "query": { "term": { "key": "$key" } }
-             |}""".stripMargin
-        val action = new Search.Builder(query)
-          .addIndex(IndexName)
-          .addType(Types.ApiKey)
-          .build()
-        val result = jest.execute(action)
-        result
-          .getHits(classOf[JsonElement])
-          .asScala
-          .flatMap(hit => parseHit(hit.source, hit.id))
-          .headOption
-      }
+      def enable(keyId: String): F[Unit] =
+        client.execute(updateById(indexName, keyId).doc("active" -> true)).void
 
-      def list(page: Int): Id[Page[ApiKey]] = {
-        val query =
-          s"""{
-             |  "from": ${pageToOffset(page)},
-             |  "size": $PageSize,
-             |  "query": { "match_all": {} }
-             |}""".stripMargin
-        val action = new Search.Builder(query)
-          .addIndex(IndexName)
-          .addType(Types.ApiKey)
-          .addSort(new Sort("createdBy"))
-          .build()
-        val result = jest.execute(action)
-        val items = result
-          .getHits(classOf[JsonElement])
-          .asScala
-          .flatMap(hit => parseHit(hit.source, hit.id))
-        Page(items, page, result.getTotal.toInt)
-      }
-
-      def updateLastUsed(keyId: String): Id[Unit] = {
-        val update =
-          s"""
-             |{
-             |   "doc" : {
-             |      "lastUsed": "${OffsetDateTime.now()}"
-             |   }
-             |}
-         """.stripMargin
-        val action = new Update.Builder(update)
-          .index(IndexName)
-          .`type`(Types.ApiKey)
-          .id(keyId)
-          .build()
-        val result = jest.execute(action)
-        if (!result.isSucceeded)
-          logger.warn(s"Failed to update last-used timestamp for API key. Error: ${result.getErrorMessage}")
-      }
-
-      def disable(keyId: String): Id[Unit] =
-        executeAndRefresh(updateActiveFlag(keyId, active = false)).run(jest)
-
-      def enable(keyId: String): Id[Unit] =
-        executeAndRefresh(updateActiveFlag(keyId, active = true)).run(jest)
-
-      def delete(keyId: String): Id[Boolean] =
-        executeAndRefresh(_delete(keyId)).run(jest)
+      def delete(keyId: String): F[Boolean] =
+        client.execute(deleteById(indexName, keyId)).map(_.isSuccess)
     }
 }

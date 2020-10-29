@@ -3,9 +3,8 @@ package controllers
 import java.time.OffsetDateTime
 
 import com.gu.googleauth.{AuthAction, GoogleAuthConfig, UserIdentity}
-import elasticsearch.Elastic55
+import deployments.{Link, SearchTerms}
 import logic.Deployments
-import models.Link
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.libs.ws.WSClient
@@ -25,66 +24,73 @@ class DeploymentsController(
 
   import DeploymentsController._
 
-  val jestClient = ctx.jestClient
+  val healthcheck: Action[AnyContent] =
+    Action { Ok("OK") }
 
-  val healthcheck = Action { Ok("OK") }
+  val index: Action[AnyContent] =
+    authAction { request =>
+      implicit val user: UserIdentity = request.user
+      Ok(views.html.index())
+    }
 
-  val index = authAction { request =>
-    implicit val user: UserIdentity = request.user
-    Ok(views.html.index())
-  }
-
-  def search(team: Option[String], service: Option[String], buildId: Option[String], page: Int) = authAction {
-    implicit request =>
+  def search(team: Option[String], service: Option[String], buildId: Option[String], page: Int): Action[AnyContent] =
+    authAction.async { implicit request =>
       implicit val user: UserIdentity = request.user
       val showAdminColumn             = ctx.isAdmin(user)
-      val (teamQuery, serviceQuery, buildIdQuery) =
-        (team.filter(_.nonEmpty), service.filter(_.nonEmpty), buildId.filter(_.nonEmpty))
-      val searchResult = Elastic55.Deployments.search(teamQuery, serviceQuery, buildIdQuery, page).run(jestClient)
-      Ok(views.html.deployments.search(searchResult, teamQuery, serviceQuery, buildIdQuery, showAdminColumn))
-  }
 
-  def create = apiKeyAuth.ApiKeyAuthAction.async { implicit request =>
-    DeploymentForm.bindFromRequest.fold(
-      _ =>
-        Future.successful(
-          BadRequest(
-            """You must include at least the following form fields in your POST: 'team', 'service', 'buildId'.
-            |You may also include the following fields:
-            |- one or more links (e.g. links[0].title=PR, links[0].url=http://github.com/my-pr) (link title and URL must both be non-empty strings)
-            |- a 'note' field containing any notes about the deployment (can be an empty string)
-            |- a 'notifySlackChannel' field containing an additional Slack channel that you want to notify (#announce_change will always be notified)
-            |""".stripMargin
-          )
-        ),
-      data => {
-        Deployments
-          .createDeployment(
-            data.team,
-            data.service,
-            data.buildId,
-            OffsetDateTime.now(),
-            data.links.getOrElse(Nil),
-            data.note,
-            data.notifySlackChannel
-          )
-          .run(ctx)
-          .map(_ => Ok("ok"))
+      val terms: SearchTerms =
+        SearchTerms(
+          team = team.filter(_.nonEmpty),
+          service = service.filter(_.nonEmpty),
+          buildId = buildId.filter(_.nonEmpty)
+        )
+
+      ctx.deployments.search(terms, page).map { result =>
+        Ok(views.html.deployments.search(result, terms.team, terms.service, terms.buildId, showAdminColumn))
       }
-    )
-  }
+    }
 
-  def delete(id: String) = authAction { request =>
-    implicit val user: UserIdentity = request.user
-    if (ctx.isAdmin(user)) {
-      Elastic55.Deployments.delete(id).run(ctx.jestClient) match {
-        case Left(errorMessage) => Ok(s"Failed to delete $id. Error message: $errorMessage")
-        case Right(_)           => Ok(s"Deleted $id")
-      }
-    } else
-      Forbidden("Sorry, you're not cool enough")
-  }
+  def create: Action[AnyContent] =
+    apiKeyAuth.ApiKeyAuthAction.async { implicit request =>
+      DeploymentForm.bindFromRequest.fold(
+        _ =>
+          Future.successful(
+            BadRequest(
+              """You must include at least the following form fields in your POST: 'team', 'service', 'buildId'.
+                |You may also include the following fields:
+                |- one or more links (e.g. links[0].title=PR, links[0].url=http://github.com/my-pr) (link title and URL must both be non-empty strings)
+                |- a 'note' field containing any notes about the deployment (can be an empty string)
+                |- a 'notifySlackChannel' field containing an additional Slack channel that you want to notify (#announce_change will always be notified)
+                |""".stripMargin
+            )
+          ),
+        data => {
+          Deployments
+            .createDeployment(
+              data.team,
+              data.service,
+              data.buildId,
+              OffsetDateTime.now(),
+              data.links.getOrElse(Nil),
+              data.note,
+              data.notifySlackChannel
+            )
+            .run(ctx)
+            .map(_ => Ok("ok"))
+        }
+      )
+    }
 
+  def delete(id: String): Action[AnyContent] =
+    authAction.async { request =>
+      implicit val user: UserIdentity = request.user
+      if (ctx.isAdmin(user)) {
+        ctx.deployments.delete(id).map {
+          case Left(errorMessage) => Ok(s"Failed to delete $id. Error message: $errorMessage")
+          case Right(_)           => Ok(s"Deleted $id")
+        }
+      } else Future.successful(Forbidden("Sorry, you're not cool enough"))
+    }
 }
 
 object DeploymentsController {
@@ -98,7 +104,7 @@ object DeploymentsController {
       notifySlackChannel: Option[String]
   )
 
-  val DeploymentForm = Form(
+  val DeploymentForm: Form[DeploymentFormData] = Form(
     mapping(
       "team"    -> nonEmptyText,
       "service" -> nonEmptyText,
