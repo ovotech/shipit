@@ -25,7 +25,7 @@ class AppLoader extends ApplicationLoader {
     logger.info(s"Logging to Graylog? $loggingToGraylog")
 
     val components = new AppComponents(context, config)
-    Await.result(components.keys.createIndex >> components.depls.createIndex, 1.second)
+    Await.result(components.keys.createIndex >> components.depls.createIndex, 5.seconds)
     components.application
   }
 
