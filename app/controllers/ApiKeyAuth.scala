@@ -1,34 +1,34 @@
 package controllers
 
-import es.ES
-import io.searchbox.client.JestClient
+import apikeys.{ApiKeys, ExistingApiKey}
+import cats.data.EitherT
+import models.Identified
 import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class ApiKeyAuth(jestClient: JestClient, actionBuilder: DefaultActionBuilder)(implicit ec: ExecutionContext) {
+class ApiKeyAuth(apiKeys: ApiKeys[Future], actionBuilder: DefaultActionBuilder)(implicit ec: ExecutionContext) {
 
   object CheckApiKey extends ActionFilter[Request] with Results {
 
-    override def executionContext: ExecutionContext = ec
+    def executionContext: ExecutionContext = ec
 
-    override protected def filter[A](request: Request[A]): Future[Option[Result]] = Future {
-      request.getQueryString("apikey") match {
-        case Some(key) =>
-          ES.ApiKeys.findByKey(key).run(jestClient) match {
-            case Some(apiKey) if apiKey.active =>
-              // OK, update last-used timestamp for API key and allow request to proceed
-              ES.ApiKeys.updateLastUsed(apiKey.id).run(jestClient)
-              None
-            case _ =>
-              Some(Unauthorized("Invalid API key"))
-          }
-        case None =>
-          Some(Unauthorized("You must provide an 'apikey' query parameter"))
-      }
-    }
+    def findParameter(request: Request[_]): Either[Result, String] =
+      request.getQueryString("apikey").toRight(Unauthorized("You must provide an 'apikey' query parameter"))
+
+    def findInElasticSearch(key: String): Future[Either[Result, Identified[ExistingApiKey]]] =
+      apiKeys.findByKey(key).map(_.filter(_.value.active).toRight(Unauthorized("Invalid API Key")))
+
+    protected def filter[A](request: Request[A]): Future[Option[Result]] =
+      EitherT
+        .fromEither[Future](findParameter(request))
+        .flatMap(k => EitherT(findInElasticSearch(k)))
+        .semiflatMap(k => apiKeys.updateLastUsed(k.id))
+        .swap
+        .toOption
+        .value
   }
 
-  val ApiKeyAuthAction: ActionBuilder[Request, AnyContent] = actionBuilder andThen CheckApiKey
-
+  val ApiKeyAuthAction: ActionBuilder[Request, AnyContent] =
+    actionBuilder andThen CheckApiKey
 }

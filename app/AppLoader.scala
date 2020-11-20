@@ -1,11 +1,16 @@
-import es.ES
-import play.api.libs.logback.LogbackLoggerConfigurator
-import play.api.{Application, ApplicationLoader}
-import play.api.ApplicationLoader.Context
+import cats.instances.future._
+import cats.syntax.flatMap._
 import ch.qos.logback.classic.LoggerContext
 import ch.qos.logback.classic.spi.ILoggingEvent
 import me.moocar.logbackgelf.{GZIPEncoder, GelfLayout, GelfUDPAppender}
 import org.slf4j.LoggerFactory
+import play.api.ApplicationLoader.Context
+import play.api.libs.logback.LogbackLoggerConfigurator
+import play.api.{Application, ApplicationLoader}
+
+import scala.concurrent.Await
+import scala.concurrent.ExecutionContext.Implicits._
+import scala.concurrent.duration._
 
 class AppLoader extends ApplicationLoader {
 
@@ -20,9 +25,7 @@ class AppLoader extends ApplicationLoader {
     logger.info(s"Logging to Graylog? $loggingToGraylog")
 
     val components = new AppComponents(context, config)
-
-    ES.initIndex.run(components.jestClient)
-
+    Await.result(components.keys.createIndex >> components.depls.createIndex, 5.seconds)
     components.application
   }
 
