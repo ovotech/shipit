@@ -23,6 +23,9 @@ Parameters:
   OldElasticSearchDomainEndpoint:
     Description: Old ElasticSearch Domain endpoint to use
     Type: String
+  UserAllowedToAssumeRole:
+    Description: AWS  user / role allowed to assume the shipit role for testing
+    Type: String
 
 Resources:
   Route53Zone:
@@ -146,8 +149,12 @@ Resources:
     Properties:
       AssumeRolePolicyDocument:
         Statement:
-          -
-            Effect: Allow
+          - Effect: Allow
+            Principal:
+              AWS: !Ref UserAllowedToAssumeRole
+            Action:
+              - sts:AssumeRole
+          - Effect: Allow
             Principal:
               Service:
                 - ecs-tasks.amazonaws.com
@@ -241,6 +248,7 @@ Resources:
           Subnets: !Ref AppSubnets
           SecurityGroups:
             - !Ref ECSServiceSecurityGroup
+            - !Ref ElasticsearchSecurityGroup
 
   # ECS service will only accept traffic from the load balancer
   LoadBalancerCanSendTrafficToECSService:
@@ -309,7 +317,7 @@ Resources:
     Type: AWS::SSM::Parameter
     Properties:
       Name: shipit.es.endpointUrl
-      Value: !Sub "https://${ElasticsearchDomain.DomainEndpoint}"
+      Value: !Sub "https://${ElasticsearchDomain.DomainEndpoint}:443"
       Type: String
 
   LoadBalancer:
@@ -356,28 +364,53 @@ Resources:
       Certificates:
         - CertificateArn: !Ref LoadBalancerCertificate
 
+  ElasticsearchSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: 'Allow inbound traffic on 443 and outbound traffic to anywhere'
+      SecurityGroupEgress:
+        - CidrIp: "0.0.0.0/0"
+          IpProtocol: -1
+      VpcId: !Ref VPC
+
+  ElasticsearchSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref ElasticsearchSecurityGroup
+      SourceSecurityGroupId: !Ref ElasticsearchSecurityGroup
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+
+  ElasticsearchServiceLinkedRole:
+    Type: AWS::IAM::ServiceLinkedRole
+    Properties:
+      Description: Allow ES access to VPC resources
+      AWSServiceName: es.amazonaws.com
+
   ElasticsearchDomain:
     Type: AWS::Elasticsearch::Domain
+    DependsOn: [ElasticsearchServiceLinkedRole]
     Properties:
-      # TODO VPC config?
       EBSOptions:
         EBSEnabled: true
         VolumeSize: 10
+      EncryptionAtRestOptions:
+        Enabled: true
+      NodeToNodeEncryptionOptions:
+        Enabled: true
+      VPCOptions:
+        SubnetIds: !Ref AppSubnets
+        SecurityGroupIds: [!Ref ElasticsearchSecurityGroup]
       ElasticsearchClusterConfig:
-        InstanceCount: 2
-        InstanceType: t2.small.elasticsearch
-      ElasticsearchVersion: 5.5
+        InstanceCount: 3
+        InstanceType: t3.small.elasticsearch
+        ZoneAwarenessEnabled: true
+        ZoneAwarenessConfig:
+          AvailabilityZoneCount: 3
+      ElasticsearchVersion: 7.8
       SnapshotOptions:
         AutomatedSnapshotStartHour: 1
-      AccessPolicies:
-        Version: "2012-10-17"
-        Statement:
-          -
-            Effect: "Allow"
-            Principal:
-              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
-            Action: "es:*"
-            Resource: "*"
       Tags:
         - Key: Service
           Value: shipit

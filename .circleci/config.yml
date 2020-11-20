@@ -72,6 +72,7 @@ jobs:
                            ParameterKey=AppImage,ParameterValue=${IMAGE_URL} \
                            ParameterKey=VPC,UsePreviousValue=true \
                            ParameterKey=AppSubnets,UsePreviousValue=true \
+                           ParameterKey=UserAllowedToAssumeRole,UsePreviousValue=true \
                            ParameterKey=LoadBalancerSubnets,UsePreviousValue=true \
                            ParameterKey=OldElasticSearchDomainArn,UsePreviousValue=true \
                            ParameterKey=OldElasticSearchDomainEndpoint,UsePreviousValue=true
