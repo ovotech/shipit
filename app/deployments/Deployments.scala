@@ -14,6 +14,7 @@ import com.sksamuel.elastic4s.ElasticDsl.{createIndex, properties, _}
 import com.sksamuel.elastic4s.cats.effect.instances._
 import com.sksamuel.elastic4s.circe._
 import com.sksamuel.elastic4s.fields.{DateField, KeywordField, NestedField}
+import com.sksamuel.elastic4s.requests.admin.UpdateIndexLevelSettingsRequest
 import com.sksamuel.elastic4s.requests.indexes.CreateIndexRequest
 import com.sksamuel.elastic4s.requests.searches.SearchRequest
 import com.sksamuel.elastic4s.requests.searches.queries.matches.MatchQuery
@@ -39,6 +40,9 @@ object Deployments {
   val indexName: String                  = "shipit_v3_deployments"
   implicit val fk: FunctorK[Deployments] = cats.tagless.Derive.functorK
 
+  val maxResultWindow: UpdateIndexLevelSettingsRequest =
+    updateIndexLevelSettings(List(indexName)).maxResultWindow(500000)
+
   private def searchFilters(terms: SearchTerms): Option[NonEmptyList[MatchQuery]] =
     NonEmptyList.fromList(
       terms.buildId.map(b => matchQuery("buildId", b)).toList ++
@@ -47,8 +51,9 @@ object Deployments {
     )
 
   private def searchQuery(terms: SearchTerms, page: Int): SearchRequest = {
-    val basicQuery = search(indexName).from(pageToOffset(page)).limit(PageSize).matchAllQuery()
-    searchFilters(terms).fold(basicQuery)(f => basicQuery.postFilter(must(f.head, f.tail: _*)))
+    val query    = search(indexName).from(pageToOffset(page)).limit(PageSize).matchAllQuery()
+    val filtered = searchFilters(terms).fold(query)(f => query.postFilter(must(f.head, f.tail: _*)))
+    filtered.sortByFieldDesc("timestamp").trackTotalHits(true)
   }
 
   private def recentQuery(deployedInLastNDays: Int): SearchRequest =
@@ -101,7 +106,8 @@ object Deployments {
       implicit val depDec: Decoder[Deployment] = deriveDecoder[Deployment]
 
       def createIndex: F[Unit] =
-        client.execute(createDeployments).void
+        client.execute(createDeployments).void >>
+          client.execute(maxResultWindow).void
 
       def create(dep: Deployment): F[Identified[Deployment]] =
         client.execute(indexInto(indexName).source(dep)).map(r => Identified(r.result.id, dep))
