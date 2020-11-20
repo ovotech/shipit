@@ -13,7 +13,7 @@ import cats.tagless.FunctorK
 import com.sksamuel.elastic4s.ElasticDsl.{createIndex, properties, _}
 import com.sksamuel.elastic4s.cats.effect.instances._
 import com.sksamuel.elastic4s.circe._
-import com.sksamuel.elastic4s.fields.{DateField, KeywordField, NestedField}
+import com.sksamuel.elastic4s.fields.{DateField, KeywordField, NestedField, TextField}
 import com.sksamuel.elastic4s.requests.admin.UpdateIndexLevelSettingsRequest
 import com.sksamuel.elastic4s.requests.indexes.CreateIndexRequest
 import com.sksamuel.elastic4s.requests.searches.SearchRequest
@@ -78,7 +78,7 @@ object Deployments {
           KeywordField("service"),
           KeywordField("buildId"),
           DateField("timestamp"),
-          KeywordField("note"),
+          TextField("note"),
           NestedField(
             name = "links",
             properties = List(
