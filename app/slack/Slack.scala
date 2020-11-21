@@ -1,9 +1,9 @@
 package slack
 
 import cats.data.Kleisli
-import models.Deployment
-import play.api.libs.json.{JsString, JsValue, Json}
+import deployments.Deployment
 import play.api.libs.json.Json.{arr, obj}
+import play.api.libs.json.{JsString, JsValue, Json}
 import play.api.libs.ws.{WSClient, WSResponse}
 
 import scala.concurrent.Future

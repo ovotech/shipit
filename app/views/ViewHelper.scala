@@ -1,9 +1,9 @@
 package views
 
-import java.time.{OffsetDateTime, ZoneOffset}
 import java.time.format.DateTimeFormatter
+import java.time.{OffsetDateTime, ZoneOffset}
 
-import models.ApiKey
+import _root_.apikeys.ExistingApiKey
 
 object ViewHelper {
 
@@ -12,7 +12,7 @@ object ViewHelper {
       .atZoneSameInstant(ZoneOffset.UTC)
       .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) + " GMT"
 
-  def statusBadge(apiKey: ApiKey) =
+  def statusBadge(apiKey: ExistingApiKey) =
     if (apiKey.active)
       <span class="label label-primary">Active</span>
     else
