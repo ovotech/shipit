@@ -9,7 +9,7 @@ version := "1.0"
 resolvers += Resolver.bintrayRepo("ovotech", "maven")
 val elastic4sVersion = "7.8.1"
 val circeVersion = "0.12.3"
-val cirisVersion = "1.0.4"
+val cirisVersion = "1.2.1"
 
 libraryDependencies ++= Seq(
   ws,
