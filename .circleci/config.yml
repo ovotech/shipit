@@ -1,5 +1,19 @@
 version: 2
 
+new_aws_login: &new_aws_login
+  run:
+    name: Set AWS environment to the new account
+    command: |
+      echo 'export AWS_ACCESS_KEY_ID=$SHIPIT_AWS_ACCESS_KEY_ID' >> $BASH_ENV
+      echo 'export AWS_SECRET_ACCESS_KEY=$SHIPIT_AWS_SECRET_ACCESS_KEY' >> $BASH_ENV
+
+set_vars: &set_vars
+  run:
+    name: Set some useful vars
+    command: |
+      echo 'export GIT_SHA1="${CIRCLE_SHA1:-$(git rev-parse HEAD)}"' >> $BASH_ENV
+      echo 'export AWS_ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"' >> $BASH_ENV
+      echo 'export IMAGE_URL="${AWS_ACCOUNT_ID}.dkr.ecr.eu-west-1.amazonaws.com/shipit:${GIT_SHA1}"' >> $BASH_ENV
 jobs:
   build:
     working_directory: ~/shipit
@@ -8,6 +22,8 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker
+      - *new_aws_login
+      - *set_vars
       - run:
           name: Install AWS CLI
           command: scripts/ci/install-aws-cli.sh
@@ -28,7 +44,8 @@ jobs:
           name: Publish docker image if master branch
           command: |
             if [ "${CIRCLE_BRANCH}" == "master" -a "${CIRCLE_PROJECT_USERNAME}" == "ovotech" ]; then
-              scripts/ci/publish-docker-image.sh
+              `aws ecr get-login --no-include-email --region eu-west-1`
+              docker tag shipit:1.0 $IMAGE_URL && docker push $IMAGE_URL
             else
               echo "Not publishing Docker image"
             fi
@@ -39,12 +56,26 @@ jobs:
       - image: circleci/openjdk:11.0.5-jdk-stretch
     steps:
       - checkout
+      - *new_aws_login
+      - *set_vars
       - run:
           name: Install AWS CLI
           command: scripts/ci/install-aws-cli.sh
       - run:
           name: Deploy to ECS
-          command: scripts/ci/deploy-to-ecs.sh
+          command: |
+            aws cloudformation update-stack \
+              --stack-name shipit \
+              --use-previous-template \
+              --capabilities CAPABILITY_NAMED_IAM \
+              --parameters ParameterKey=OldAppDNSName,UsePreviousValue=true \
+                           ParameterKey=AppImage,ParameterValue=${IMAGE_URL} \
+                           ParameterKey=VPC,UsePreviousValue=true \
+                           ParameterKey=AppSubnets,UsePreviousValue=true \
+                           ParameterKey=UserAllowedToAssumeRole,UsePreviousValue=true \
+                           ParameterKey=LoadBalancerSubnets,UsePreviousValue=true \
+                           ParameterKey=OldElasticSearchDomainArn,UsePreviousValue=true \
+                           ParameterKey=OldElasticSearchDomainEndpoint,UsePreviousValue=true
       - run:
           name: Notify Shipit
           command: |

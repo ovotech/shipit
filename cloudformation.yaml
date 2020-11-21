@@ -8,11 +8,91 @@ Parameters:
   LoadBalancerSubnets:
     Description: Choose all the public subnets in the VPC
     Type: List<AWS::EC2::Subnet::Id>
-  LoadBalancerCertificateArn:
-    Description: ARN of the ACM cert to use for the load balancer
+  AppSubnets:
+    Description: Choose all the private subnets in the VPC
+    Type: List<AWS::EC2::Subnet::Id>
+  OldAppDNSName:
+    Description: DNS Name of the load balancer for the current shipit app
+    Type: String
+  AppImage:
+    Description: Docker image to deploy
+    Type: String
+  OldElasticSearchDomainArn:
+    Description: Old ElasticSearch Domain to use
+    Type: String
+  OldElasticSearchDomainEndpoint:
+    Description: Old ElasticSearch Domain endpoint to use
+    Type: String
+  UserAllowedToAssumeRole:
+    Description: AWS  user / role allowed to assume the shipit role for testing
     Type: String
 
 Resources:
+  Route53Zone:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: shipit.ovotech.org.uk.
+
+  LoadBalancerAlias:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      Type: A
+      Name: shipit.ovotech.org.uk.
+      HostedZoneId: !Ref Route53Zone
+      AliasTarget:
+        HostedZoneId: !GetAtt LoadBalancer.CanonicalHostedZoneID
+        DNSName: !GetAtt LoadBalancer.DNSName
+        EvaluateTargetHealth: true
+
+  LoadBalancerCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: shipit.ovotech.org.uk
+      ValidationMethod: EMAIL
+      DomainValidationOptions:
+        - ValidationDomain: ovotech.org.uk
+          DomainName: shipit.ovotech.org.uk
+
+  CIUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: shipit-ci
+      Policies:
+        - PolicyName: AllowDeployment
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecr:PutImage
+                  - ecr:UploadLayerPart
+                  - ecr:InitiateLayerUpload
+                  - ecr:CompleteLayerUpload
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:DescribeRepositories
+                Resource: !GetAtt ECRRepo.Arn
+              - Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                  - ecs:DeregisterTaskDefinition
+                  - ecs:RegisterTaskDefinition
+                  - ec2:DescribeSubnets
+                  - ec2:DescribeVpcs
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - ecs:UpdateService
+                  - ecs:DescribeServices
+                Resource: !Sub "arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:service/${ECSCluster}/${AppService.Name}"
+              - Effect: Allow
+                Action:
+                  - iam:GetRole
+                  - iam:PassRole
+                Resource:
+                  - !GetAtt ECSTaskRole.Arn
+                  - !GetAtt ECSTaskExecutionRole.Arn
+              - Effect: Allow
+                Action: cloudformation:UpdateStack
+                Resource: !Ref "AWS::StackId"
 
   ECRRepo:
     Type: AWS::ECR::Repository
@@ -24,13 +104,57 @@ Resources:
     Properties:
       ClusterName: shipit
 
+  ECSTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: AllowECSAuth
+          PolicyDocument:
+            Statement:
+              Effect: Allow
+              Action: ecr:GetAuthorizationToken
+              Resource: "*"
+        - PolicyName: AllowECSPull
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:GetRepositoryPolicy
+                  - ecr:DescribeRepositories
+                  - ecr:ListImages
+                  - ecr:DescribeImages
+                  - ecr:BatchGetImage
+                Resource: !GetAtt ECRRepo.Arn
+        - PolicyName: AllowLogging
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "arn:aws:logs:*:*:*"
+
   ECSTaskRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
         Statement:
-          -
-            Effect: Allow
+          - Effect: Allow
+            Principal:
+              AWS: !Ref UserAllowedToAssumeRole
+            Action:
+              - sts:AssumeRole
+          - Effect: Allow
             Principal:
               Service:
                 - ecs-tasks.amazonaws.com
@@ -50,6 +174,8 @@ Resources:
                 - es:ESHttpPut
                 - es:ESHttpDelete
               Resource:
+                - !Ref OldElasticSearchDomainArn
+                - !Sub "${OldElasticSearchDomainArn}/*"
                 - !GetAtt ElasticsearchDomain.DomainArn
                 - !Sub "${ElasticsearchDomain.DomainArn}/*"
         -
@@ -71,6 +197,58 @@ Resources:
     Properties:
       GroupDescription: 'Shipit ECS service'
       VpcId: !Ref VPC
+
+  AppTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Cpu: "512"
+      Memory: "1024"
+      Family: shipit
+      TaskRoleArn: !GetAtt ECSTaskRole.Arn
+      ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
+      RequiresCompatibilities:
+        - FARGATE
+      NetworkMode: awsvpc
+      ContainerDefinitions:
+        - Name: shipit
+          Image: !Ref AppImage
+          Essential: true
+          Memory: 1024
+          PortMappings:
+            - ContainerPort: 9000
+              HostPort: 9000
+              Protocol: tcp
+          Ulimits:
+            - Name: nofile
+              SoftLimit: 16384
+              HardLimit: 16384
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: /ecs/shipit
+              awslogs-stream-prefix: ecs
+              awslogs-create-group: true
+              awslogs-region: !Ref "AWS::Region"
+
+  AppService:
+    Type: AWS::ECS::Service
+    DependsOn: ALBListener
+    Properties:
+      Cluster: !Ref ECSCluster
+      DesiredCount: 1
+      LaunchType: FARGATE
+      TaskDefinition: !Ref AppTaskDefinition
+      LoadBalancers:
+        - ContainerName: shipit
+          ContainerPort: 9000
+          TargetGroupArn: !Ref ECSTargetGroup
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          Subnets: !Ref AppSubnets
+          SecurityGroups:
+            - !Ref ECSServiceSecurityGroup
+            - !Ref ElasticsearchSecurityGroup
 
   # ECS service will only accept traffic from the load balancer
   LoadBalancerCanSendTrafficToECSService:
@@ -100,6 +278,48 @@ Resources:
           DestinationSecurityGroupId: !Ref ECSServiceSecurityGroup
       VpcId: !Ref VPC
 
+  AccessLogsBucket:
+    Type: AWS::S3::Bucket
+
+  AccessLogsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref AccessLogsBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action: s3:PutObject
+            Resource: !Sub "${AccessLogsBucket.Arn}/shipit/AWSLogs/${AWS::AccountId}/*"
+            Principal:
+              AWS: arn:aws:iam::156460612806:root
+          - Effect: Allow
+            Action: s3:PutObject
+            Resource: !Sub "${AccessLogsBucket.Arn}/shipit/AWSLogs/${AWS::AccountId}/*"
+            Principal:
+              Service: delivery.logs.amazonaws.com
+            Condition:
+              StringEquals:
+                "s3:x-amz-acl": "bucket-owner-full-control"
+          - Effect: Allow
+            Action: s3:GetBucketAcl
+            Resource: !GetAtt AccessLogsBucket.Arn
+            Principal:
+              Service: delivery.logs.amazonaws.com
+
+  ElasticsearchOldEndpointUrl:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: shipit.es.oldEndpointUrl
+      Value: !Ref OldElasticSearchDomainEndpoint
+      Type: String
+
+  ElasticsearchEndpointUrl:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: shipit.es.endpointUrl
+      Value: !Sub "https://${ElasticsearchDomain.DomainEndpoint}:443"
+      Type: String
+
   LoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
@@ -107,9 +327,9 @@ Resources:
         - Key: access_logs.s3.enabled
           Value: true
         - Key: access_logs.s3.bucket
-          Value: ovo-eng-services-logs
+          Value: !Ref AccessLogsBucket
         - Key: access_logs.s3.prefix
-          Value: !Sub "shipit/loadbalancer"
+          Value: shipit
       Scheme: internet-facing
       SecurityGroups:
         - Ref: LoadBalancerSecurityGroup
@@ -142,30 +362,57 @@ Resources:
       Port: 443
       Protocol: HTTPS
       Certificates:
-        - CertificateArn: !Ref LoadBalancerCertificateArn
+        - CertificateArn: !Ref LoadBalancerCertificate
+
+  ElasticsearchSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: 'Allow inbound traffic on 443 and outbound traffic to anywhere'
+      SecurityGroupEgress:
+        - CidrIp: "0.0.0.0/0"
+          IpProtocol: -1
+      VpcId: !Ref VPC
+
+  ElasticsearchSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref ElasticsearchSecurityGroup
+      SourceSecurityGroupId: !Ref ElasticsearchSecurityGroup
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+
+  ElasticsearchServiceLinkedRole:
+    Type: AWS::IAM::ServiceLinkedRole
+    Properties:
+      Description: Allow ES access to VPC resources
+      AWSServiceName: es.amazonaws.com
 
   ElasticsearchDomain:
     Type: AWS::Elasticsearch::Domain
+    DependsOn: [ElasticsearchServiceLinkedRole]
     Properties:
-      # TODO VPC config?
       EBSOptions:
         EBSEnabled: true
         VolumeSize: 10
+      EncryptionAtRestOptions:
+        Enabled: true
+      NodeToNodeEncryptionOptions:
+        Enabled: true
+      DomainEndpointOptions:
+        EnforceHTTPS: true
+      VPCOptions:
+        SubnetIds: !Ref AppSubnets
+        SecurityGroupIds: [!Ref ElasticsearchSecurityGroup]
       ElasticsearchClusterConfig:
-        InstanceCount: 2
-        InstanceType: t2.small.elasticsearch
-      ElasticsearchVersion: 5.5
+        InstanceCount: 3
+        InstanceType: t3.small.elasticsearch
+        ZoneAwarenessEnabled: true
+        ZoneAwarenessConfig:
+          AvailabilityZoneCount: 3
+      ElasticsearchVersion: 7.8
       SnapshotOptions:
         AutomatedSnapshotStartHour: 1
-      AccessPolicies:
-        Version: "2012-10-17"
-        Statement:
-          -
-            Effect: "Allow"
-            Principal:
-              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
-            Action: "es:*"
-            Resource: "*"
       Tags:
         - Key: Service
           Value: shipit

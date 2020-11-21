@@ -2,12 +2,12 @@ package slack
 
 import java.time.OffsetDateTime
 
-import models.{Deployment, Link}
-import org.scalatest._
+import deployments.{Deployment, Link}
 import io.circe.parser._
-import play.api.libs.json.Json
+import org.scalatest._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import play.api.libs.json.Json
 
 class SlackSpec extends AnyFlatSpec with Matchers with OptionValues {
 
@@ -17,7 +17,7 @@ class SlackSpec extends AnyFlatSpec with Matchers with OptionValues {
       service = "my lovely service",
       buildId = "123",
       timestamp = OffsetDateTime.now,
-      links = Seq(
+      links = List(
         Link("PR", "https://github.com/pr"),
         Link("CI", "https://circleci.com/build/123")
       ),
@@ -66,7 +66,7 @@ class SlackSpec extends AnyFlatSpec with Matchers with OptionValues {
       service = "my lovely service",
       buildId = "123",
       timestamp = OffsetDateTime.now,
-      links = Seq(
+      links = List(
         Link("PR", "https://github.com/pr"),
         Link("CI", "https://circleci.com/build/123")
       ),
