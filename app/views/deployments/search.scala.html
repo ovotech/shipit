@@ -1,5 +1,6 @@
 @import _root_.deployments.Deployment
-@import _root_.deployments.SearchTerms
+@import _root_.deployments.{SearchTerms, Environment}
+@import _root_.deployments.Environment.{Prod, Nonprod}
 @(page: elasticsearch.Pagination.Page[Identified[Deployment]], terms: SearchTerms, showAdminColumn: Boolean)(implicit user: com.gu.googleauth.UserIdentity, request: RequestHeader)
 
 @import views.ViewHelper._
@@ -14,6 +15,13 @@
       <div class="col-md-8 d-flex pr-0 align-items-center">
         <form method="get" action="@routes.DeploymentsController.search()">
           <div class="form-row">
+            <div class="col-auto">
+              <select name="environment" class="form-control">
+                <option value="" @envSelected(terms)(None)>Any Environment</option>
+                <option value="@Prod.name" @envSelected(terms)(Some(Prod))>Only Prod</option>
+                <option value="@Nonprod.name" @envSelected(terms)(Some(Nonprod))>Only Nonprod</option>
+              </select>
+            </div>
             <div class="col">
               <input type="text" class="form-control" id="team" name="team" placeholder="Team" value="@terms.team">
             </div>
@@ -41,6 +49,9 @@
                 <span>
                   @formatDate(item.value.timestamp)
                   (<time class="timeago" datetime="@item.value.timestamp.toString">@formatDate(item.value.timestamp)</time>)
+                </span>
+                <span class="badge badge-@envBadgeClass(item.value.environment) d-inline-block ml-2">
+                  @item.value.environment.name
                 </span>
               </div>
             </div>

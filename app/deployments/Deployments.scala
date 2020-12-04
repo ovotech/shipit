@@ -1,7 +1,6 @@
 package deployments
 
 import java.time.OffsetDateTime
-
 import cats.data.NonEmptyList
 import cats.effect.Sync
 import cats.instances.list._
@@ -17,12 +16,15 @@ import com.sksamuel.elastic4s.fields.{DateField, KeywordField, NestedField, Text
 import com.sksamuel.elastic4s.requests.admin.UpdateIndexLevelSettingsRequest
 import com.sksamuel.elastic4s.requests.indexes.CreateIndexRequest
 import com.sksamuel.elastic4s.requests.searches.SearchRequest
+import com.sksamuel.elastic4s.requests.searches.queries.Query
 import com.sksamuel.elastic4s.requests.searches.queries.matches.MatchQuery
 import com.sksamuel.elastic4s.{ElasticClient, Executor}
+import deployments.Environment.{Nonprod, Prod}
 import elasticsearch.Agg.{bucket, max}
 import elasticsearch.CirceCodecs._
 import elasticsearch.Instances._
 import elasticsearch.Pagination._
+import io.circe.Decoder.{decodeOption, decodeString}
 import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
 import io.circe.{Decoder, Encoder}
 import models.{Identified, Service}
@@ -43,11 +45,23 @@ object Deployments {
   val maxResultWindow: UpdateIndexLevelSettingsRequest =
     updateIndexLevelSettings(List(indexName)).maxResultWindow(500000)
 
-  private def searchFilters(terms: SearchTerms): Option[NonEmptyList[MatchQuery]] =
+  /**
+    * Old deployments don't have an environment set but are assumed to be prod
+    * so if we search for prod we want anything that isn't explicitly nonprod
+    */
+  private def environmentFilter(environment: Option[Environment]): Option[Query] =
+    environment match {
+      case Some(Nonprod) => Some(matchQuery("environment", Nonprod.name))
+      case Some(Prod)    => Some(not(matchQuery("environment", Nonprod.name)))
+      case None          => None
+    }
+
+  private def searchFilters(terms: SearchTerms): Option[NonEmptyList[Query]] =
     NonEmptyList.fromList(
       terms.buildId.map(b => matchQuery("buildId", b)).toList ++
         terms.service.map(b => matchQuery("service", b)).toList ++
-        terms.team.map(b => matchQuery("team", b)).toList
+        terms.team.map(b => matchQuery("team", b)).toList ++
+        environmentFilter(terms.environment)
     )
 
   private def searchQuery(terms: SearchTerms, page: Int): SearchRequest = {
@@ -77,6 +91,7 @@ object Deployments {
           KeywordField("team"),
           KeywordField("service"),
           KeywordField("buildId"),
+          KeywordField("environment"),
           DateField("timestamp"),
           TextField("note"),
           NestedField(
@@ -99,6 +114,12 @@ object Deployments {
 
   def apply[F[_]: Executor](client: ElasticClient)(implicit F: Sync[F]): Deployments[F] =
     new Deployments[F] {
+
+      implicit val envDec: Decoder[Environment] =
+        decodeOption(decodeString.emap(Environment.fromString)).map(_.getOrElse(Prod))
+
+      implicit val envEnc: Encoder[Environment] =
+        Encoder.encodeString.contramap(_.name)
 
       implicit val linkEnc: Encoder[Link]      = deriveEncoder
       implicit val linkDec: Decoder[Link]      = deriveDecoder
