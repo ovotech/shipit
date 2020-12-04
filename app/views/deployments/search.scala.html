@@ -56,7 +56,7 @@
               </div>
             </div>
             <h6 class="card-subtitle text-muted">Build #@item.value.buildId</h6>
-            <pre class="card-text mt-3">@item.value.note</pre>
+            @if(item.value.note.nonEmpty) {<pre class="card-text mt-3">@item.value.note</pre>}
           </div>
           @if(item.value.links.nonEmpty) {
             <div class="card-footer">
