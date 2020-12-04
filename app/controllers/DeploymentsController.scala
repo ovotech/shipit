@@ -1,7 +1,5 @@
 package controllers
 
-import java.time.OffsetDateTime
-
 import com.gu.googleauth.{AuthAction, GoogleAuthConfig, UserIdentity}
 import deployments.{Link, SearchTerms}
 import logic.Deployments
@@ -10,6 +8,7 @@ import play.api.data.Forms._
 import play.api.libs.ws.WSClient
 import play.api.mvc._
 
+import java.time.OffsetDateTime
 import scala.concurrent.{ExecutionContext, Future}
 
 class DeploymentsController(
@@ -33,20 +32,12 @@ class DeploymentsController(
       Ok(views.html.index())
     }
 
-  def search(team: Option[String], service: Option[String], buildId: Option[String], page: Int): Action[AnyContent] =
+  def search(terms: SearchTerms, page: Int): Action[AnyContent] =
     authAction.async { implicit request =>
       implicit val user: UserIdentity = request.user
       val showAdminColumn             = ctx.isAdmin(user)
-
-      val terms: SearchTerms =
-        SearchTerms(
-          team = team.filter(_.nonEmpty),
-          service = service.filter(_.nonEmpty),
-          buildId = buildId.filter(_.nonEmpty)
-        )
-
       ctx.deployments.search(terms, page).map { result =>
-        Ok(views.html.deployments.search(result, terms.team, terms.service, terms.buildId, showAdminColumn))
+        Ok(views.html.deployments.search(result, terms, showAdminColumn))
       }
     }
 
