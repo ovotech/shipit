@@ -1,5 +1,7 @@
 @import _root_.deployments.Deployment
-@(page: elasticsearch.Pagination.Page[Identified[Deployment]], team: Option[String], service: Option[String], buildId: Option[String], showAdminColumn: Boolean)(implicit user: com.gu.googleauth.UserIdentity, request: RequestHeader)
+@import _root_.deployments.{SearchTerms, Environment}
+@import _root_.deployments.Environment.{Prod, Nonprod}
+@(page: elasticsearch.Pagination.Page[Identified[Deployment]], terms: SearchTerms, showAdminColumn: Boolean)(implicit user: com.gu.googleauth.UserIdentity, request: RequestHeader)
 
 @import views.ViewHelper._
 
@@ -11,16 +13,23 @@
         <h1>Deployments</h1>
       </div>
       <div class="col-md-8 d-flex pr-0 align-items-center">
-        <form method="get" action="@routes.DeploymentsController.search(None, None, None)">
+        <form method="get" action="@routes.DeploymentsController.search()">
           <div class="form-row">
-            <div class="col">
-              <input type="text" class="form-control" id="team" name="team" placeholder="Team" value="@team">
+            <div class="col-auto">
+              <select name="environment" class="form-control">
+                <option value="" @envSelected(terms)(None)>Any Environment</option>
+                <option value="@Prod.name" @envSelected(terms)(Some(Prod))>Only Prod</option>
+                <option value="@Nonprod.name" @envSelected(terms)(Some(Nonprod))>Only Nonprod</option>
+              </select>
             </div>
             <div class="col">
-              <input type="text" class="form-control" id="service" name="service" placeholder="Service" value="@service">
+              <input type="text" class="form-control" id="team" name="team" placeholder="Team" value="@terms.team">
             </div>
             <div class="col">
-              <input type="text" class="form-control" id="buildId" name="buildId" placeholder="buildId" value="@buildId">
+              <input type="text" class="form-control" id="service" name="service" placeholder="Service" value="@terms.service">
+            </div>
+            <div class="col">
+              <input type="text" class="form-control" id="buildId" name="buildId" placeholder="buildId" value="@terms.buildId">
             </div>
             <div class="col-auto">
               <button type="submit" class="btn btn-block btn-outline-primary">Search</button>
@@ -41,16 +50,21 @@
                   @formatDate(item.value.timestamp)
                   (<time class="timeago" datetime="@item.value.timestamp.toString">@formatDate(item.value.timestamp)</time>)
                 </span>
+                <span class="badge badge-@envBadgeClass(item.value.environment) d-inline-block ml-2">
+                  @item.value.environment.name
+                </span>
               </div>
             </div>
             <h6 class="card-subtitle text-muted">Build #@item.value.buildId</h6>
-            <pre class="card-text mt-3">@item.value.note</pre>
+            @if(item.value.note.nonEmpty) {<pre class="card-text mt-3">@item.value.note</pre>}
           </div>
-          <div class="card-footer">
-          @for((link, i) <- item.value.links.zipWithIndex) {
-            <a href="@link.url" class="card-link">@link.title</a>
+          @if(item.value.links.nonEmpty) {
+            <div class="card-footer">
+            @for((link, i) <- item.value.links.zipWithIndex) {
+              <a href="@link.url" class="card-link">@link.title</a>
+            }
+            </div>
           }
-          </div>
         </div>
       </div>
     }
@@ -58,12 +72,12 @@
     <div class="row pr-0 mt-4 mb-4 justify-content-center d-flex">
       <ul class="pagination">
         @if(page.pageNumber > 1) {
-          <li class="page-item"><a class="page-link" href="@routes.DeploymentsController.search(team, service, buildId)">Newest</a></li>
-          <li class="page-item"><a class="page-link" href="@routes.DeploymentsController.search(team, service, buildId, page.pageNumber - 1)">&larr; Newer</a></li>
+          <li class="page-item"><a class="page-link" href="@routes.DeploymentsController.search(terms)">Newest</a></li>
+          <li class="page-item"><a class="page-link" href="@routes.DeploymentsController.search(terms, page.pageNumber - 1)">&larr; Newer</a></li>
         }
         @if(page.pageNumber < page.lastPage) {
-          <li class="page-item"><a class="page-link" href="@routes.DeploymentsController.search(team, service, buildId, page.pageNumber + 1)">Older &rarr;</a></li>
-          <li class="page-item"><a class="page-link" href="@routes.DeploymentsController.search(team, service, buildId, page.lastPage)">Oldest</a></li>
+          <li class="page-item"><a class="page-link" href="@routes.DeploymentsController.search(terms, page.pageNumber + 1)">Older &rarr;</a></li>
+          <li class="page-item"><a class="page-link" href="@routes.DeploymentsController.search(terms, page.lastPage)">Oldest</a></li>
         }
       </ul>
     </div>

@@ -1,8 +1,7 @@
 package datadog
 
 import java.time.OffsetDateTime
-
-import deployments.{Deployment, Link}
+import deployments.{Deployment, Environment, Link}
 import io.circe.parser._
 import org.scalatest._
 import org.scalatest.flatspec.AnyFlatSpec
@@ -15,6 +14,7 @@ class DatadogSpec extends AnyFlatSpec with Matchers with OptionValues {
     val deployment = Deployment(
       team = "Team America",
       service = "my lovely service",
+      environment = Environment.Prod,
       buildId = "123",
       timestamp = OffsetDateTime.now,
       links = List(
@@ -34,7 +34,8 @@ class DatadogSpec extends AnyFlatSpec with Matchers with OptionValues {
         | "tags": [
         |   "shipit:deployment",
         |   "team:Team America",
-        |   "service:my lovely service"
+        |   "service:my lovely service",
+        |   "env:prod"
         |  ]
         |}
       """.stripMargin

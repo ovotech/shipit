@@ -1,16 +1,17 @@
 package logic
 
 import java.time.OffsetDateTime
-
 import cats.data.Kleisli
 import cats.instances.future._
 import cats.syntax.option._
 import com.gu.googleauth.UserIdentity
 import datadog.Datadog
-import deployments.{Deployment, Deployments => Depls, Link}
+import deployments.Environment.Prod
+import deployments.{Deployment, Environment, Link, Deployments => Depls}
 import models._
 import org.slf4j.LoggerFactory
 import play.api.libs.ws.WSResponse
+import cats.syntax.traverse._
 import slack.Slack
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -32,13 +33,13 @@ object Deployments {
       service: String,
       buildId: String,
       timestamp: OffsetDateTime,
+      environment: Environment,
       links: Seq[Link],
       note: Option[String],
       notifySlackChannel: Option[String]
   ): Kleisli[Future, Context, Deployment] = {
 
-    val deployment = Deployment(team, service, buildId, timestamp, links.toList, note)
-
+    val deployment = Deployment(team, service, buildId, timestamp, environment, links.toList, note)
     for {
       _               <- persistToES(deployment)
       slackResp       <- sendMainSlackNotification(deployment)
@@ -60,8 +61,10 @@ object Deployments {
   private def persistToES(deployment: Deployment): Kleisli[Future, Context, Identified[Deployment]] =
     Kleisli(ctx => ctx.deployments.create(deployment))
 
-  private def sendMainSlackNotification(deployment: Deployment): Kleisli[Future, Context, WSResponse] =
-    Slack.sendNotification(deployment, channel = None).local[Context](_.slackCtx)
+  private def sendMainSlackNotification(deployment: Deployment): Kleisli[Future, Context, Option[WSResponse]] =
+    Option(deployment.environment)
+      .filter(_ == Prod)
+      .traverse(_ => Slack.sendNotification(deployment, channel = None).local[Context](_.slackCtx))
 
   private def sendSlackNotificationToCustomChannel(
       deployment: Deployment,
