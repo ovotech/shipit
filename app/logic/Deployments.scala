@@ -19,7 +19,6 @@ import scala.concurrent.Future
 
 object Deployments {
 
-  type Step[A] = Kleisli[Future, Context, A]
   private val logger = LoggerFactory.getLogger(getClass)
 
   case class Context(
@@ -59,7 +58,7 @@ object Deployments {
     }
   }
 
-  private def persistToES(deployment: Deployment): Step[Identified[Deployment]] =
+  private def persistToES(deployment: Deployment): Kleisli[Future, Context, Identified[Deployment]] =
     Kleisli(ctx => ctx.deployments.create(deployment))
 
   private def sendMainSlackNotification(deployment: Deployment): Kleisli[Future, Context, Option[WSResponse]] =
