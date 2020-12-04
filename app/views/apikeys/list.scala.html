@@ -7,71 +7,98 @@
 
 @main {
 
-  <div class="page-header">
-    <h1>API keys</h1>
-  </div>
+  <div class="container">
 
-  <p>You will need an API key if you want to send deployment events to :shipit:</p>
+    <div class="row mt-4 mb-2 no-gutters">
+      <div class="col">
+        <h1>API keys</h1>
+      </div>
+    </div>
 
+    <div class="row no-gutters mb-2">
+      <div class="col">
+        @for(info <- flash.get("info")) {
+          <div class="alert alert-info" role="alert">@info</div>
+        }
+        @for(error <- flash.get("error")) {
+          <div class="alert alert-danger" role="alert">@error</div>
+        }
+        <p class="mb-0">You will need an API key if you want to send deployment events to :shipit:</p>
+        <p>Here are the API keys that currently exist, sorted by the user who created them.</p>
+      </div>
+    </div>
 
-  @for(info <- flash.get("info")) {
-    <div class="alert alert-info" role="alert">@info</div>
-  }
-  @for(error <- flash.get("error")) {
-    <div class="alert alert-danger" role="alert">@error</div>
-  }
-
-  <p>Here are the API keys that currently exist, sorted by the user who created them.</p>
-
-  <table class="table table-striped">
-    <thead>
-      <tr><th>Key</th><th>Created by</th><th>Status</th><th>Last used</th><th>Description</th><th>Actions</th></tr>
-    </thead>
-    <tbody>
-      @for(item <- page.items) {
-        <tr>
-          <td>@item.value.key</td>
-          <td>@item.value.createdBy</td>
-          <td>@statusBadge(item.value)</td>
-          <td>@item.value.lastUsed.fold[Html](Html("(unknown)")){timestamp: OffsetDateTime => <time class="timeago" datetime="@timestamp.toString">@formatDate(timestamp)</time>}</td>
-          <td>@item.value.description</td>
-          <td>
-            <form id="disable_@item.id" method="post" action="@routes.ApiKeysController.disable(item.id)">@CSRF.formField</form>
-            <form id="enable_@item.id" method="post" action="@routes.ApiKeysController.enable(item.id)">@CSRF.formField</form>
-            <form id="delete_@item.id" method="post" action="@routes.ApiKeysController.delete(item.id)">@CSRF.formField</form>
-            @if(item.value.active) {
-              <button form="disable_@item.id" class="btn btn-warning btn-sm">Disable</button>
-            } else {
-              <button form="enable_@item.id" class="btn btn-primary btn-sm">Enable</button>
-            }
-            <button form="delete_@item.id" class="btn btn-danger btn-sm">Delete</button>
-          </td>
-        </tr>
-      }
-    </tbody>
-  </table>
-
-  <ul class="pager">
-    @if(page.pageNumber > 1) {
-      <li><a href="@routes.ApiKeysController.list(page.pageNumber - 1)">&larr; Prev</a></li>
-    }
-    @if(page.pageNumber < page.lastPage) {
-      <li><a href="@routes.ApiKeysController.list(page.pageNumber + 1)">Next &rarr;</a></li>
-    }
-  </ul>
-
-  <div class="panel panel-default">
-    <div class="panel-heading">Create an API key</div>
-    <div class="panel-body">
-      <form method="post" action="@routes.ApiKeysController.create" class="form-inline">
-        @CSRF.formField
-        <div class="form-group">
-          <label for="description">Description <small>(optional)</small></label>
-          <input type="text" class="form-control" id="description" name="description">
+    <h5>Create API key</h5>
+    <div class="row no-gutters mb-4">
+      <form method="post" action="@routes.ApiKeysController.create">
+        <div class="form-row mt-1 mb-1">
+          @CSRF.formField
+          <div class="col">
+            <input type="text" class="form-control" id="description" name="description" placeholder="Description (optional)">
+          </div>
+          <div class="col-auto">
+            <button type="submit" class="btn btn-primary">Submit</button>
+          </div>
         </div>
-        <button type="submit" class="btn btn-primary">Submit</button>
       </form>
     </div>
-  </div>
 
+    <div class="row no-gutters pt-2 mb-2">
+      <h5>Existing API keys</h5>
+    </div>
+
+    @for(item <- page.items) {
+      <div class="row no-gutters mb-2">
+        <div class="card flex-fill shadow-sm">
+          <div class="card-body">
+            <div class="row no-gutters">
+              <div class="col-auto mr-auto">
+                <h5 class="card-title">
+                  <span class="text-muted user-select-none">@item.value.description / </span><span class="text-monospace">@item.value.key</span>
+                </h5>
+              </div>
+              <div class="col-lg text-lg-right mb-md-3 mb-lg-0">
+                <span class="text-muted">
+                  Last used
+                  @item.value.lastUsed.fold[Html](Html("(unknown)")){ timestamp: OffsetDateTime =>
+                    <time class="timeago" datetime="@timestamp.toString">@formatDate(timestamp)</time>
+                  }
+                </span>
+                <div class="dropdown d-inline-block ml-3">
+                  <form id="disable_@item.id" method="post" action="@routes.ApiKeysController.disable(item.id)">@CSRF.formField</form>
+                  <form id="enable_@item.id" method="post" action="@routes.ApiKeysController.enable(item.id)">@CSRF.formField</form>
+                  <form id="delete_@item.id" method="post" action="@routes.ApiKeysController.delete(item.id)">@CSRF.formField</form>
+                  <button class="btn btn-sm btn-outline-@buttonClass(item.value) dropdown-toggle" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">@statusText(item.value)</button>
+                  <div class="dropdown-menu" aria-labelledby="dropdownMenu2">
+                    @if(item.value.active) {
+                      <button form="disable_@item.id" class="dropdown-item">Disable</button>
+                    } else {
+                      <button form="enable_@item.id" class="dropdown-item">Enable</button>
+                    }
+                  <div class="dropdown-divider"></div>
+                  <button form="delete_@item.id" class="dropdown-item">Delete</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <h6 class="card-subtitle text-muted">Created by @item.value.createdBy</h6>
+
+          </div>
+        </div>
+      </div>
+    }
+
+    <div class="row pr-0 mt-4 mb-4 justify-content-center d-flex">
+      <ul class="pagination">
+        @if(page.pageNumber > 1) {
+          <li class="page-item"><a class="page-link" href="@routes.ApiKeysController.list()">First</a></li>
+          <li class="page-item"><a class="page-link" href="@routes.ApiKeysController.list(page.pageNumber - 1)">&larr; Previous</a></li>
+        }
+        @if(page.pageNumber < page.lastPage) {
+          <li class="page-item"><a class="page-link" href="@routes.ApiKeysController.list(page.pageNumber + 1)">Next &rarr;</a></li>
+          <li class="page-item"><a class="page-link" href="@routes.ApiKeysController.list(page.lastPage)">Last</a></li>
+        }
+      </ul>
+    </div>
+  </div>
 }

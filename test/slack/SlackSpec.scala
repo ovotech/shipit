@@ -1,8 +1,7 @@
 package slack
 
 import java.time.OffsetDateTime
-
-import deployments.{Deployment, Link}
+import deployments.{Deployment, Environment, Link}
 import io.circe.parser._
 import org.scalatest._
 import org.scalatest.flatspec.AnyFlatSpec
@@ -16,6 +15,7 @@ class SlackSpec extends AnyFlatSpec with Matchers with OptionValues {
       team = "Team America",
       service = "my lovely service",
       buildId = "123",
+      environment = Environment.Prod,
       timestamp = OffsetDateTime.now,
       links = List(
         Link("PR", "https://github.com/pr"),
@@ -64,6 +64,7 @@ class SlackSpec extends AnyFlatSpec with Matchers with OptionValues {
     val deployment = Deployment(
       team = "Team America",
       service = "my lovely service",
+      environment = Environment.Prod,
       buildId = "123",
       timestamp = OffsetDateTime.now,
       links = List(
