@@ -1,19 +1,51 @@
 @()(implicit user: com.gu.googleauth.UserIdentity)
 
 @main {
-
-  <div class="page-header">
-    <h1>:shipit:</h1>
-  </div>
-
-  <p>:shipit: is a deployment log service. How to use:</p>
-
-  <ol>
-    <li>Send a simple HTTP POST to :shipit: every time you deploy any of your services.</li>
-    <li>See all your deployments in a lovely table!</li>
-    <li>Let :shipit: take care of sending Slack notifications to #announce_change for you.</li>
-  </ol>
-
-  <p>For more details, take a look at the <a href="@routes.MainController.guide">User Guide</a>.</p>
-
+    <section class="jumbotron text-center">
+        <div class="container">
+            <h1>:shipit:</h1>
+            <p class="lead">:shipit: is a deployment log service.</p>
+        </div>
+    </section>
+    <div class="container">
+        <div class="card-deck">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Create an API key</h5>
+                    <p class="card-text">
+                        To begin using shipit you need an API key. These aren't particularly secret
+                        but just in case that changes it is wise to make your own.
+                    </p>
+                    <a href="@routes.ApiKeysController.list()" class="btn btn-outline-primary btn-block">Create or view API Keys</a>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Tell shipit when you deploy</h5>
+                    <p class="card-text">
+                        Either send a simple HTTP POST or, if you're using CircleCI, consider
+                        using the Orb created by the production engineering team.
+                    </p>
+                    <div class="row no-gutters">
+                        <div class="col col-sm mr-1">
+                            <a href="@routes.MainController.guide" class="btn btn-outline-primary btn-block">View the docs</a>
+                        </div>
+                        <div class="col col-sm ml-1">
+                            <a href="https://circleci.com/developer/orbs/orb/ovotech/shipit" class="btn btn-outline-primary btn-block">Try the Orb</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">See recent deployments</h5>
+                    <p class="card-text">
+                        Your magnificent deployments will be announced for all to see and you'll be
+                        universally admired as a productive 10x developer
+                    </p>
+                    <a class="btn btn-outline-primary btn-block" href="@routes.DeploymentsController.search(None, None, None)">Deployments</a>
+                </div>
+            </div>
+        </div>
+    </div>
 }
