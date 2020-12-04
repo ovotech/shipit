@@ -4,35 +4,40 @@
 
 @main {
 
-  <div class="page-header">
-    <h1>Services</h1>
-  </div>
-
-  <form method="get" action="@routes.ServicesController.list(0)" class="form form-horizontal">
-    <div class="form-group">
-      <label class="col-sm-4 control-label" for="team">Show services deployed in the last N days</label>
-      <div class="col-sm-2">
-        <input type="text" class="form-control" id="days" name="days" value="@days">
+  <div class="container">
+    <div class="row mt-4 mb-4">
+      <div class="col-md">
+        <h1>Services</h1>
       </div>
-      <div class="col-sm-4">
-        <button type="submit" class="btn btn-primary">Filter</button>
+      <div class="col-md d-flex pr-0 align-items-center justify-content-md-end">
+        <form method="get" action="@routes.ServicesController.list(0)" class="form form-horizontal">
+          <div class="form-row">
+            <div class="col-auto">
+              <input type="text" class="form-control" id="days" name="days" value="@days">
+            </div>
+            <div class="col">
+              <button type="submit" class="btn btn-outline-primary">Filter</button>
+            </div>
+          </div>
+        </form>
       </div>
     </div>
-  </form>
 
-  <table class="table table-striped">
-    <thead>
-      <tr><th>Team</th><th>Service</th><th>Last deployment</th></tr>
-    </thead>
-    <tbody>
-      @for(item <- services) {
-        <tr>
-          <td>@item.team</td>
-          <td>@item.service</td>
-          <td>@formatDate(item.lastDeployed) (<time class="timeago" datetime="@item.lastDeployed.toString">@formatDate(item.lastDeployed)</time>)</td>
-        </tr>
-      }
-    </tbody>
-  </table>
-
+    <div class="row">
+      <table class="table table-striped">
+        <thead>
+          <tr><th>Team</th><th>Service</th><th>Last deployment</th></tr>
+        </thead>
+        <tbody>
+        @for(item <- services) {
+          <tr>
+            <td>@item.team</td>
+            <td>@item.service</td>
+            <td>@formatDate(item.lastDeployed) (<time class="timeago" datetime="@item.lastDeployed.toString">@formatDate(item.lastDeployed)</time>)</td>
+          </tr>
+        }
+        </tbody>
+      </table>
+    </div>
+  </div>
 }

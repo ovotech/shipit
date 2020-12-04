@@ -2,87 +2,70 @@
 @(page: elasticsearch.Pagination.Page[Identified[Deployment]], team: Option[String], service: Option[String], buildId: Option[String], showAdminColumn: Boolean)(implicit user: com.gu.googleauth.UserIdentity, request: RequestHeader)
 
 @import views.ViewHelper._
-@import helper._
 
 @main {
 
-  <div class="page-header">
-    <h1>Deployments</h1>
-  </div>
+  <div class="container">
+    <div class="row mt-4 mb-4 no-gutters">
+      <div class="col-md mr-auto">
+        <h1>Deployments</h1>
+      </div>
+      <div class="col-md-8 d-flex pr-0 align-items-center">
+        <form method="get" action="@routes.DeploymentsController.search(None, None, None)">
+          <div class="form-row">
+            <div class="col">
+              <input type="text" class="form-control" id="team" name="team" placeholder="Team" value="@team">
+            </div>
+            <div class="col">
+              <input type="text" class="form-control" id="service" name="service" placeholder="Service" value="@service">
+            </div>
+            <div class="col">
+              <input type="text" class="form-control" id="buildId" name="buildId" placeholder="buildId" value="@buildId">
+            </div>
+            <div class="col-auto">
+              <button type="submit" class="btn btn-block btn-outline-primary">Search</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
 
-  <div class="panel panel-default">
-    <div class="panel-heading">Filters <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#filters" aria-expanded="false" aria-controls="filters">Toggle</button></div>
-    <div class="panel-body collapse" id="filters">
-      <form method="get" action="@routes.DeploymentsController.search(None, None, None)" class="form form-horizontal">
-        <div class="form-group">
-          <label class="col-sm-2 control-label" for="team">Team</label>
-          <div class="col-sm-4">
-            <input type="text" class="form-control" id="team" name="team" value="@team">
+    @for(item <- page.items) {
+      <div class="row no-gutters mb-2">
+        <div class="card flex-fill shadow-sm">
+          <div class="card-body">
+            <div class="row no-gutters">
+              <div class="col mr-auto"><h5 class="card-title"><span class="text-muted">@item.value.team / </span>@item.value.service</h5></div>
+              <div class="col text-right">
+                <span>
+                  @formatDate(item.value.timestamp)
+                  (<time class="timeago" datetime="@item.value.timestamp.toString">@formatDate(item.value.timestamp)</time>)
+                </span>
+              </div>
+            </div>
+            <h6 class="card-subtitle text-muted">Build #@item.value.buildId</h6>
+            <pre class="card-text mt-3">@item.value.note</pre>
+          </div>
+          <div class="card-footer">
+          @for((link, i) <- item.value.links.zipWithIndex) {
+            <a href="@link.url" class="card-link">@link.title</a>
+          }
           </div>
         </div>
-        <div class="form-group">
-          <label class="col-sm-2 control-label" for="service">Service</label>
-          <div class="col-sm-4">
-            <input type="text" class="form-control" id="service" name="service" value="@service">
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="col-sm-2 control-label" for="buildId">Build ID</label>
-          <div class="col-sm-4">
-            <input type="text" class="form-control" id="buildId" name="buildId" value="@buildId">
-          </div>
-        </div>
-        <!-- TODO date picker -->
-        <div class="form-group">
-          <div class="col-sm-offset-2 col-sm-4">
-            <button type="submit" class="btn btn-primary">Search</button>
-          </div>
-        </div>
-      </form>
+      </div>
+    }
+
+    <div class="row pr-0 mt-4 mb-4 justify-content-center d-flex">
+      <ul class="pagination">
+        @if(page.pageNumber > 1) {
+          <li class="page-item"><a class="page-link" href="@routes.DeploymentsController.search(team, service, buildId)">Newest</a></li>
+          <li class="page-item"><a class="page-link" href="@routes.DeploymentsController.search(team, service, buildId, page.pageNumber - 1)">&larr; Newer</a></li>
+        }
+        @if(page.pageNumber < page.lastPage) {
+          <li class="page-item"><a class="page-link" href="@routes.DeploymentsController.search(team, service, buildId, page.pageNumber + 1)">Older &rarr;</a></li>
+          <li class="page-item"><a class="page-link" href="@routes.DeploymentsController.search(team, service, buildId, page.lastPage)">Oldest</a></li>
+        }
+      </ul>
     </div>
   </div>
-
-  <table class="table table-striped">
-    <thead>
-      <tr><th>Timestamp</th><th>Team</th><th>Service</th><th>Build ID</th><th>Links and notes</th>@if(showAdminColumn){<th>Danger zone</th>}</tr>
-    </thead>
-    <tbody>
-      @for(item <- page.items) {
-        <tr>
-          <td>@formatDate(item.value.timestamp) (<time class="timeago" datetime="@item.value.timestamp.toString">@formatDate(item.value.timestamp)</time>)</td>
-          <td>@item.value.team</td>
-          <td>@item.value.service</td>
-          <td>@item.value.buildId</td>
-          <td>
-            <ul>
-            @for((link, i) <- item.value.links.zipWithIndex) {
-              <li><a href="@link.url" target="_blank">@link.title</a></li>
-            }
-            </ul>
-            @for(note <- item.value.note) {
-              <pre>@item.value.note</pre>
-            }
-          </td>
-          @if(showAdminColumn) {
-            <td>
-              <form id="delete_@item.id" method="post" action="@routes.DeploymentsController.delete(item.id)">@CSRF.formField</form>
-              <button form="delete_@item.id" class="btn btn-danger btn-sm">Delete</button>
-            </td>
-          }
-        </tr>
-      }
-    </tbody>
-  </table>
-
-  <ul class="pager">
-    @if(page.pageNumber > 1) {
-      <li><a href="@routes.DeploymentsController.search(team, service, buildId)">Latest</a></li>
-      <li><a href="@routes.DeploymentsController.search(team, service, buildId, page.pageNumber - 1)">&larr; Newer</a></li>
-    }
-    @if(page.pageNumber < page.lastPage) {
-      <li><a href="@routes.DeploymentsController.search(team, service, buildId, page.pageNumber + 1)">Older &rarr;</a></li>
-      <li><a href="@routes.DeploymentsController.search(team, service, buildId, page.lastPage)">Oldest</a></li>
-    }
-  </ul>
-
 }
