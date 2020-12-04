@@ -29,7 +29,8 @@ object Datadog {
       "tags" -> arr(
         "shipit:deployment",
         s"team:${deployment.team}",
-        s"service:${deployment.service}"
+        s"service:${deployment.service}",
+        s"env:${deployment.environment.name}"
       )
     )
 

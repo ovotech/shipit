@@ -34,7 +34,8 @@ class DatadogSpec extends AnyFlatSpec with Matchers with OptionValues {
         | "tags": [
         |   "shipit:deployment",
         |   "team:Team America",
-        |   "service:my lovely service"
+        |   "service:my lovely service",
+        |   "env:prod"
         |  ]
         |}
       """.stripMargin
