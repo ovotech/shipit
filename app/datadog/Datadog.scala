@@ -30,7 +30,8 @@ object Datadog {
         "shipit:deployment",
         s"team:${deployment.team}",
         s"service:${deployment.service}",
-        s"env:${deployment.environment.name}"
+        s"env:${deployment.environment.name}",
+        s"build_id:${deployment.buildId}"
       )
     )
 
