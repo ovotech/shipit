@@ -5,6 +5,7 @@ import play.api.mvc.QueryStringBindable
 import play.api.mvc.QueryStringBindable.{bindableOption, bindableString}
 
 import java.time.OffsetDateTime
+import scala.util.matching.Regex
 
 case class Link(
     title: String,
@@ -32,14 +33,19 @@ sealed abstract class Environment(val name: String)
 
 object Environment {
 
-  case object Nonprod extends Environment("nonprod")
-  case object Prod    extends Environment("prod")
+  case object LoadTest extends Environment("load-testing")
+  case object Nonprod  extends Environment("nonprod")
+  case object Prod     extends Environment("prod")
+
+  private val loadTest: Regex =
+    "load\\W?test(ing)?".r
 
   def fromString(str: String): Either[String, Environment] =
     str.toLowerCase match {
-      case "prd" | "prod"    => Right(Prod)
-      case "uat" | "nonprod" => Right(Nonprod)
-      case other             => Left(s"Unknown environment $other")
+      case "prd" | "prod"                             => Right(Prod)
+      case "uat" | "nonprod"                          => Right(Nonprod)
+      case str if loadTest.findFirstIn(str).isDefined => Right(LoadTest)
+      case other                                      => Left(s"Unknown environment $other")
     }
 }
 

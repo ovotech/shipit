@@ -4,6 +4,7 @@ import java.time.format.DateTimeFormatter
 import java.time.{OffsetDateTime, ZoneOffset}
 import _root_.apikeys.ExistingApiKey
 import _root_.deployments.{Environment, SearchTerms}
+import _root_.deployments.Environment.{LoadTest, Nonprod, Prod}
 import play.twirl.api.Html
 
 object ViewHelper {
@@ -23,5 +24,9 @@ object ViewHelper {
     if (terms.environment == environment) Html("selected") else Html("")
 
   def envBadgeClass(environment: Environment): String =
-    if (environment == Environment.Prod) "success" else "warning"
+    environment match {
+      case Prod     => "success"
+      case Nonprod  => "warning"
+      case LoadTest => "info"
+    }
 }
