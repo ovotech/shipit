@@ -32,14 +32,16 @@ sealed abstract class Environment(val name: String)
 
 object Environment {
 
-  case object Nonprod extends Environment("nonprod")
-  case object Prod    extends Environment("prod")
+  case object LoadTest extends Environment("loadtest")
+  case object Nonprod  extends Environment("nonprod")
+  case object Prod     extends Environment("prod")
 
   def fromString(str: String): Either[String, Environment] =
     str.toLowerCase match {
-      case "prd" | "prod"    => Right(Prod)
-      case "uat" | "nonprod" => Right(Nonprod)
-      case other             => Left(s"Unknown environment $other")
+      case "prd" | "prod"                                     => Right(Prod)
+      case "uat" | "nonprod"                                  => Right(Nonprod)
+      case str if "load\\W?test".r.findFirstIn(str).isDefined => Right(LoadTest)
+      case other                                              => Left(s"Unknown environment $other")
     }
 }
 
