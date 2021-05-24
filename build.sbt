@@ -5,7 +5,7 @@ scalaVersion := "2.13.5"
 // The uploaded docker image will be tagged with the git sha1.
 version := "1.0"
 resolvers += "Kaluza artifactory" at "https://kaluza.jfrog.io/artifactory/maven"
-val elastic4sVersion = "7.12.0"
+val elastic4sVersion = "7.12.2"
 val circeVersion = "0.13.0"
 val cirisVersion = "1.2.1"
 
