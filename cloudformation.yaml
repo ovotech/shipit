@@ -44,15 +44,6 @@ Resources:
         DNSName: !GetAtt LoadBalancer.DNSName
         EvaluateTargetHealth: true
 
-  LoadBalancerCertificate:
-    Type: AWS::CertificateManager::Certificate
-    Properties:
-      DomainName: shipit.ovotech.org.uk
-      ValidationMethod: EMAIL
-      DomainValidationOptions:
-        - ValidationDomain: ovotech.org.uk
-          DomainName: shipit.ovotech.org.uk
-
   ShipitCertificate:
     Type: AWS::CertificateManager::Certificate
     Properties:
