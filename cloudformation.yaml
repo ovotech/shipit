@@ -371,7 +371,7 @@ Resources:
       Port: 443
       Protocol: HTTPS
       Certificates:
-        - CertificateArn: !Ref LoadBalancerCertificate
+        - CertificateArn: !Ref ShipitCertificate
 
   ElasticsearchSecurityGroup:
     Type: AWS::EC2::SecurityGroup
