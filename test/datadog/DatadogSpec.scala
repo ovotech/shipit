@@ -10,7 +10,7 @@ import play.api.libs.json.Json
 
 class DatadogSpec extends AnyFlatSpec with Matchers with OptionValues {
 
-  it should "build a payload for a Datadog event" in {
+  ({
     val deployment = Deployment(
       team = "Team America",
       service = "my lovely service",
@@ -43,6 +43,6 @@ class DatadogSpec extends AnyFlatSpec with Matchers with OptionValues {
     ).right.get
 
     assert(json == expectedJson)
-  }
+  } / it should "build a payload for a Datadog event")
 
 }
