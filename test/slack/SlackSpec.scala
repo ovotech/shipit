@@ -10,7 +10,7 @@ import play.api.libs.json.Json
 
 class SlackSpec extends AnyFlatSpec with Matchers with OptionValues {
 
-  it should "build a payload for a deployment with a note" in {
+  ({
     val deployment = Deployment(
       team = "Team America",
       service = "my lovely service",
@@ -58,9 +58,9 @@ class SlackSpec extends AnyFlatSpec with Matchers with OptionValues {
     ).right.get
 
     assert(json == expectedJson)
-  }
+  } / it should "build a payload for a deployment with a note")
 
-  it should "build a payload with a custom channel" in {
+  ({
     val deployment = Deployment(
       team = "Team America",
       service = "my lovely service",
@@ -104,6 +104,6 @@ class SlackSpec extends AnyFlatSpec with Matchers with OptionValues {
     ).right.get
 
     assert(json == expectedJson)
-  }
+  } / it should "build a payload with a custom channel")
 
 }
