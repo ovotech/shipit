@@ -41,7 +41,7 @@ class AppComponents(context: Context, config: Config)
       clientId = config.google.clientId,
       clientSecret = config.google.clientSecret.value,
       redirectUrl = config.google.redirectUrl,
-      domains = List("ovoenergy.com", "kaluza.com"),
+      domains = List("ovo.com", "ovoenergy.com", "kaluza.com"),
       antiForgeryChecker = AntiForgeryChecker(
         InitialSecret(httpConfiguration.secret.secret),
         AntiForgeryChecker.signatureAlgorithmFromPlay(httpConfiguration)
