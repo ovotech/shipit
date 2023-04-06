@@ -1,3 +1,5 @@
+OVO is no longer maintaining Shipit.
+
 # :shipit:
 
 :shipit: is a deployment log service. How to use:
